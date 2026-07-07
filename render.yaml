@@ -1,0 +1,25 @@
+# Render Blueprint — despliegue del backend (S0-2 CD / S0-3).
+# Importar desde el dashboard de Render: New > Blueprint > conectar este repo.
+# La base de datos se provisiona en Neon (no aquí); DATABASE_URL se rellena a mano.
+services:
+  - type: web
+    name: series-tracker-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install uv && uv sync --frozen && uv run alembic upgrade head
+    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: prod
+      # Secretos: configurar en el dashboard de Render (Environment), NUNCA aquí.
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: TMDB_BEARER_TOKEN
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

@@ -1,0 +1,31 @@
+# ---- Secretos / entorno ----
+.env
+.env.*
+!.env.example
+
+# ---- Python / backend ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# ---- Node / frontend ----
+node_modules/
+dist/
+.vite/
+*.local
+
+# ---- Claude Code (config local personal) ----
+.claude/settings.local.json
+
+# ---- Sistema / editores ----
+.DS_Store
+.idea/
+.vscode/
+*.log

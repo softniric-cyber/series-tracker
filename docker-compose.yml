@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16
+    container_name: series_tracker_db
+    environment:
+      POSTGRES_USER: series
+      POSTGRES_PASSWORD: series
+      POSTGRES_DB: series_tracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U series -d series_tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
