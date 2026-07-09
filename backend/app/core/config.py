@@ -17,6 +17,8 @@ class Settings(BaseSettings):
 
     tmdb_bearer_token: str = ""
     tmdb_base_url: str = "https://api.themoviedb.org/3"
+    # CDN de imágenes de TMDB; se le añade el tamaño (p. ej. /w342) y el poster_path.
+    tmdb_image_base_url: str = "https://image.tmdb.org/t/p"
 
     cors_origins: str = "http://localhost:5173"
 

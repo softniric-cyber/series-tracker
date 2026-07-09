@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from app.core.db import get_db
 from app.models.user import User
 from app.services.auth import get_user_by_id
 from app.services.security import TokenError, decode_token
+from app.services.tmdb_client import TMDBClient
 
 DbSession = Annotated[Session, Depends(get_db)]
 
@@ -45,3 +46,12 @@ def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def get_tmdb_client(request: Request) -> TMDBClient:
+    """Devuelve el cliente TMDB compartido creado en el lifespan de la app."""
+    client: TMDBClient = request.app.state.tmdb_client
+    return client
+
+
+TmdbClient = Annotated[TMDBClient, Depends(get_tmdb_client)]

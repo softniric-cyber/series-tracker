@@ -1,12 +1,27 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, users
+from app.api import auth, series, users
 from app.core.config import get_settings
+from app.services.tmdb_client import TMDBClient
 
 settings = get_settings()
 
-app = FastAPI(title="SeriesTracker API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    # Un único cliente TMDB reutiliza conexiones durante toda la vida de la app.
+    app.state.tmdb_client = TMDBClient()
+    try:
+        yield
+    finally:
+        await app.state.tmdb_client.aclose()
+
+
+app = FastAPI(title="SeriesTracker API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,6 +33,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(series.router)
 
 
 @app.get("/health", tags=["health"])
