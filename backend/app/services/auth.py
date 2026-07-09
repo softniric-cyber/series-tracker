@@ -50,3 +50,15 @@ def get_user_by_id(db: Session, user_id: str) -> User | None:
     except ValueError:
         return None
     return db.get(User, uid)
+
+
+def update_user_profile(
+    db: Session, user: User, *, country: str | None, language: str | None
+) -> User:
+    if country is not None:
+        user.country = country
+    if language is not None:
+        user.language = language
+    db.commit()
+    db.refresh(user)
+    return user
