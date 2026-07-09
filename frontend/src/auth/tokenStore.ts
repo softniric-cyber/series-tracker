@@ -1,0 +1,22 @@
+import type { TokenPair } from '../api/types'
+
+const ACCESS_KEY = 'st_access'
+const REFRESH_KEY = 'st_refresh'
+
+export function getAccessToken(): string | null {
+  return localStorage.getItem(ACCESS_KEY)
+}
+
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_KEY)
+}
+
+export function setTokens(tokens: TokenPair): void {
+  localStorage.setItem(ACCESS_KEY, tokens.access_token)
+  localStorage.setItem(REFRESH_KEY, tokens.refresh_token)
+}
+
+export function clearTokens(): void {
+  localStorage.removeItem(ACCESS_KEY)
+  localStorage.removeItem(REFRESH_KEY)
+}
