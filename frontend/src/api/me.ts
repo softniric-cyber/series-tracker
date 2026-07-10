@@ -1,5 +1,10 @@
 import { apiFetch } from './client'
-import type { FollowedSeries, SeriesProgress } from './types'
+import type { CalendarEntry, FollowedSeries, SeriesProgress } from './types'
+
+export function getCalendar(from: string, to: string): Promise<CalendarEntry[]> {
+  const params = new URLSearchParams({ from, to })
+  return apiFetch<CalendarEntry[]>(`/me/calendar?${params.toString()}`)
+}
 
 export function getMySeries(): Promise<FollowedSeries[]> {
   return apiFetch<FollowedSeries[]>('/me/series')

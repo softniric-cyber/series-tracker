@@ -79,6 +79,17 @@ export interface SeriesProgress {
   next_episode: EpisodeSummary | null
 }
 
+export interface CalendarEntry {
+  series_tmdb_id: number
+  series_name: string
+  poster_url: string | null
+  episode_tmdb_id: number
+  season_number: number
+  episode_number: number
+  episode_name: string | null
+  air_date: string
+}
+
 export interface SeasonDetail {
   series_tmdb_id: number
   season_number: number
