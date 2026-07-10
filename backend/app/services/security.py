@@ -4,6 +4,7 @@ Se mantienen puras (sin acceso a base de datos) para poder testearlas de forma
 unitaria y para que cuenten en la cobertura de `app/services`.
 """
 
+import hashlib
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
@@ -67,3 +68,42 @@ def decode_token(token: str, expected_type: TokenType) -> str:
     if not isinstance(subject, str):
         raise TokenError("missing subject")
     return subject
+
+
+# --- Reset de contraseña (S3-6) -------------------------------------------
+#
+# Token stateless de vida corta. Incluye una huella del hash de contraseña
+# actual (`pwf`): al cambiar la contraseña, la huella cambia y los enlaces de
+# reset previos dejan de ser válidos (uso único de facto, sin tabla en BD).
+
+
+def password_fingerprint(password_hash: str) -> str:
+    return hashlib.sha256(password_hash.encode()).hexdigest()[:16]
+
+
+def create_reset_token(subject: str, password_hash: str) -> str:
+    now = datetime.now(UTC)
+    minutes = get_settings().reset_token_minutes
+    payload: dict[str, Any] = {
+        "sub": subject,
+        "type": "reset",
+        "pwf": password_fingerprint(password_hash),
+        "iat": now,
+        "exp": now + timedelta(minutes=minutes),
+    }
+    return jwt.encode(payload, get_settings().jwt_secret, algorithm=_ALGORITHM)
+
+
+def decode_reset_token(token: str) -> tuple[str, str]:
+    """Devuelve `(sub, pwf)` si el token de reset es válido; si no, lanza TokenError."""
+    try:
+        payload = jwt.decode(token, get_settings().jwt_secret, algorithms=[_ALGORITHM])
+    except jwt.PyJWTError as exc:
+        raise TokenError("invalid or expired token") from exc
+    if payload.get("type") != "reset":
+        raise TokenError("unexpected token type")
+    subject = payload.get("sub")
+    fingerprint = payload.get("pwf")
+    if not isinstance(subject, str) or not isinstance(fingerprint, str):
+        raise TokenError("malformed reset token")
+    return subject, fingerprint
