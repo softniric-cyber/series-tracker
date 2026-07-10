@@ -21,6 +21,29 @@ class UserPublic(BaseModel):
     created_at: datetime
 
 
+class ExportedFollowedSeries(BaseModel):
+    tmdb_id: int
+    name: str
+    added_at: datetime
+
+
+class ExportedWatchedEpisode(BaseModel):
+    episode_tmdb_id: int
+    series_tmdb_id: int
+    season_number: int
+    episode_number: int
+    watched_at: datetime
+
+
+class UserDataExport(BaseModel):
+    """Volcado completo de los datos del usuario (RGPD, portabilidad — S3-3)."""
+
+    exported_at: datetime
+    profile: UserPublic
+    followed_series: list[ExportedFollowedSeries]
+    watched_episodes: list[ExportedWatchedEpisode]
+
+
 class UserUpdate(BaseModel):
     """Campos editables del perfil. Todos opcionales (PATCH parcial)."""
 

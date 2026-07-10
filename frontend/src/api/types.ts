@@ -79,6 +79,19 @@ export interface SeriesProgress {
   next_episode: EpisodeSummary | null
 }
 
+export interface UserDataExport {
+  exported_at: string
+  profile: UserPublic
+  followed_series: { tmdb_id: number; name: string; added_at: string }[]
+  watched_episodes: {
+    episode_tmdb_id: number
+    series_tmdb_id: number
+    season_number: number
+    episode_number: number
+    watched_at: string
+  }[]
+}
+
 export interface CalendarEntry {
   series_tmdb_id: number
   series_name: string

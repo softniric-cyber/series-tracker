@@ -33,9 +33,19 @@ export default function Navbar() {
         </nav>
         <div className="ml-auto flex items-center gap-3">
           {user && (
-            <span className="hidden max-w-[12rem] truncate text-sm text-neutral-500 sm:inline">
+            <NavLink
+              to="/cuenta"
+              className={({ isActive }) =>
+                `hidden max-w-[12rem] truncate text-sm transition sm:inline ${
+                  isActive
+                    ? 'text-brand-600 dark:text-brand-400'
+                    : 'text-neutral-500 hover:text-brand-600 dark:hover:text-brand-400'
+                }`
+              }
+              title="Ir a mi cuenta"
+            >
               {user.email}
-            </span>
+            </NavLink>
           )}
           <button
             type="button"
