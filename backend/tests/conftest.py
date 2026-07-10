@@ -12,7 +12,12 @@ from sqlalchemy.orm import Session, sessionmaker
 
 import app.models  # noqa: F401  — puebla Base.metadata
 from app.core.db import Base, get_db
+from app.core.ratelimit import limiter
 from app.main import app
+
+# El rate limiting se desactiva por defecto en los tests (los que hacen muchos
+# registros/logins lo saturarían). El test de rate limiting lo reactiva a mano.
+limiter.enabled = False
 
 TEST_DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql+psycopg://series:series@localhost:5432/series_tracker"
