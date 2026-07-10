@@ -1,0 +1,34 @@
+name: Refresh calendar
+
+on:
+  schedule:
+    # Diario a las 06:00 UTC (arquitectura §5).
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    name: Refresh followed series
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run refresh job
+        run: uv run python -m app.jobs.refresh
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TMDB_BEARER_TOKEN: ${{ secrets.TMDB_BEARER_TOKEN }}

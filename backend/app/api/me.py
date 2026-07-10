@@ -1,16 +1,20 @@
 """Endpoints «Mis series»: seguir, dejar de seguir y listar (S2-3)."""
 
+from datetime import date, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Path, status
+from fastapi import APIRouter, HTTPException, Path, Query, status
 
 from app.api.deps import CurrentUser, DbSession, TmdbClient
 from app.core.config import get_settings
-from app.schemas.series import FollowedSeries, SeriesProgress
+from app.schemas.series import CalendarEntry, FollowedSeries, SeriesProgress
 from app.services import tracking
 from app.services.tmdb_client import TMDBNotFoundError
 
 router = APIRouter(prefix="/me", tags=["me"])
+
+# Tope del rango del calendario para evitar consultas desmedidas.
+_MAX_CALENDAR_DAYS = 366
 
 
 @router.get("/series", response_model=list[FollowedSeries])
@@ -114,6 +118,27 @@ async def unmark_season_watched(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Serie o temporada no encontrada"
         ) from exc
+
+
+@router.get("/calendar", response_model=list[CalendarEntry])
+def calendar(
+    current_user: CurrentUser,
+    db: DbSession,
+    from_: Annotated[date | None, Query(alias="from")] = None,
+    to: Annotated[date | None, Query()] = None,
+) -> list[CalendarEntry]:
+    start = from_ or date.today()
+    end = to or start + timedelta(days=30)
+    if end < start:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="«to» no puede ser anterior a «from»"
+        )
+    if (end - start).days > _MAX_CALENDAR_DAYS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"El rango no puede superar {_MAX_CALENDAR_DAYS} días",
+        )
+    return tracking.list_calendar(db, current_user, start, end, get_settings().tmdb_image_base_url)
 
 
 @router.get("/series/{tmdb_id}/progress", response_model=SeriesProgress)

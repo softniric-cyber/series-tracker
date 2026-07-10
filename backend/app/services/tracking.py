@@ -16,7 +16,7 @@ from app.models.series import Series
 from app.models.user import User
 from app.models.user_series import UserSeries
 from app.models.watched_episode import WatchedEpisode
-from app.schemas.series import EpisodeSummary, FollowedSeries, SeriesProgress
+from app.schemas.series import CalendarEntry, EpisodeSummary, FollowedSeries, SeriesProgress
 from app.services.series_cache import get_season, get_series
 from app.services.tmdb_client import TMDBClient
 
@@ -215,3 +215,41 @@ async def get_progress(
         watched_episodes=sum(1 for ep in aired if ep.tmdb_id in watched),
         next_episode=next_episode,
     )
+
+
+# --- Calendario (S3-1) ----------------------------------------------------
+
+
+def list_calendar(
+    db: Session, user: User, start: date, end: date, image_base: str
+) -> list[CalendarEntry]:
+    """Episodios de las series seguidas por el usuario que se emiten en [start, end]."""
+    stmt = (
+        select(Episode, Series)
+        .join(Series, Series.tmdb_id == Episode.series_tmdb_id)
+        .join(UserSeries, UserSeries.series_tmdb_id == Episode.series_tmdb_id)
+        .where(
+            UserSeries.user_id == user.id,
+            Episode.season_number >= 1,
+            Episode.air_date.is_not(None),
+            Episode.air_date >= start,
+            Episode.air_date <= end,
+        )
+        .order_by(Episode.air_date, Episode.season_number, Episode.episode_number)
+    )
+    entries = []
+    for episode, series in db.execute(stmt).all():
+        assert episode.air_date is not None  # garantizado por el WHERE
+        entries.append(
+            CalendarEntry(
+                series_tmdb_id=series.tmdb_id,
+                series_name=series.name,
+                poster_url=_poster_url(image_base, series.poster_path),
+                episode_tmdb_id=episode.tmdb_id,
+                season_number=episode.season_number,
+                episode_number=episode.episode_number,
+                episode_name=episode.name,
+                air_date=episode.air_date,
+            )
+        )
+    return entries

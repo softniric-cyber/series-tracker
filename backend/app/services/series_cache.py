@@ -22,8 +22,8 @@ from app.schemas.series import (
 )
 from app.services.tmdb_client import TMDBClient
 
-# Estados de TMDB en los que la serie ya no cambia (TTL largo).
-_FINISHED_STATUSES = frozenset({"Ended", "Canceled", "Cancelled"})
+# Estados de TMDB en los que la serie ya no cambia (TTL largo, no se refresca en el job).
+FINISHED_STATUSES = frozenset({"Ended", "Canceled", "Cancelled"})
 _DEFAULT_TTL = timedelta(hours=24)
 _FINISHED_TTL = timedelta(days=7)
 
@@ -31,7 +31,7 @@ _POSTER_SIZE = "w342"
 
 
 def _ttl_for(status: str | None) -> timedelta:
-    return _FINISHED_TTL if status in _FINISHED_STATUSES else _DEFAULT_TTL
+    return _FINISHED_TTL if status in FINISHED_STATUSES else _DEFAULT_TTL
 
 
 def _is_fresh(cached_at: datetime, status: str | None, now: datetime) -> bool:
@@ -106,11 +106,12 @@ async def get_series(
     *,
     language: str,
     now: datetime | None = None,
+    force: bool = False,
 ) -> Series:
-    """Devuelve la serie desde la caché; solo llama a TMDB si falta o está caducada."""
+    """Devuelve la serie desde la caché; llama a TMDB si falta, caduca o `force`."""
     now = now or datetime.now(UTC)
     series = db.get(Series, tmdb_id)
-    if series is not None and _is_fresh(series.cached_at, series.status, now):
+    if not force and series is not None and _is_fresh(series.cached_at, series.status, now):
         return series
     payload = await client.get_tv(tmdb_id, language=language)
     return _upsert_series(db, payload, now)
@@ -175,11 +176,12 @@ async def get_season(
     *,
     language: str,
     now: datetime | None = None,
+    force: bool = False,
 ) -> tuple[Series, list[Episode]]:
-    """Episodios de una temporada, caché-first; TMDB solo en miss/stale de la temporada."""
+    """Episodios de una temporada, caché-first; TMDB en miss/stale de la temporada o `force`."""
     now = now or datetime.now(UTC)
-    series = await get_series(db, client, tmdb_id, language=language, now=now)
-    if _season_is_fresh(series, season_number, now):
+    series = await get_series(db, client, tmdb_id, language=language, now=now, force=force)
+    if not force and _season_is_fresh(series, season_number, now):
         return series, _load_season_episodes(db, tmdb_id, season_number)
     payload = await client.get_tv_season(tmdb_id, season_number, language=language)
     _upsert_episodes(db, tmdb_id, season_number, payload.get("episodes") or [])
