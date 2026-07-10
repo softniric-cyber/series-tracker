@@ -63,3 +63,20 @@ class SeasonDetail(BaseModel):
     season_number: int
     name: str | None
     episodes: list[EpisodeSummary]
+
+
+class WatchProvider(BaseModel):
+    provider_id: int
+    provider_name: str
+    logo_url: str | None
+    display_priority: int
+
+
+class SeriesProviders(BaseModel):
+    """Dónde ver la serie según el país del perfil (TMDB watch/providers)."""
+
+    country: str
+    link: str | None
+    flatrate: list[WatchProvider]
+    rent: list[WatchProvider]
+    buy: list[WatchProvider]

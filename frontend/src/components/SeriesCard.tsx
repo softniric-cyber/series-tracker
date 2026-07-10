@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { SeriesSearchResult } from '../api/types'
 
 export default function SeriesCard({ series }: { series: SeriesSearchResult }) {
@@ -6,7 +7,10 @@ export default function SeriesCard({ series }: { series: SeriesSearchResult }) {
     series.vote_average != null && series.vote_average > 0 ? series.vote_average.toFixed(1) : null
 
   return (
-    <article className="overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+    <Link
+      to={`/series/${series.tmdb_id}`}
+      className="group block overflow-hidden rounded-xl border border-neutral-200 bg-white transition hover:border-brand-500 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-brand-500"
+    >
       <div className="aspect-[2/3] w-full bg-neutral-100 dark:bg-neutral-800">
         {series.poster_url ? (
           <img
@@ -30,6 +34,6 @@ export default function SeriesCard({ series }: { series: SeriesSearchResult }) {
           {rating && <span>★ {rating}</span>}
         </div>
       </div>
-    </article>
+    </Link>
   )
 }

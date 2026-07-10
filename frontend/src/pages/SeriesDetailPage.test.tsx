@@ -1,0 +1,107 @@
+import { describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import type { SeasonDetail, SeriesDetail, SeriesProviders } from '../api/types'
+
+const mockDetail = vi.fn()
+const mockProviders = vi.fn()
+const mockSeason = vi.fn()
+vi.mock('../api/series', () => ({
+  getSeriesDetail: (id: number) => mockDetail(id),
+  getSeriesProviders: (id: number) => mockProviders(id),
+  getSeason: (id: number, n: number) => mockSeason(id, n),
+}))
+
+import SeriesDetailPage from './SeriesDetailPage'
+
+const detail: SeriesDetail = {
+  tmdb_id: 95396,
+  name: 'Separación',
+  overview: 'Mark lidera un equipo.',
+  poster_url: 'https://image.tmdb.org/t/p/w342/poster.jpg',
+  status: 'Returning Series',
+  first_air_date: '2022-02-17',
+  last_air_date: '2025-03-21',
+  genres: ['Drama', 'Misterio'],
+  number_of_seasons: 2,
+  number_of_episodes: 19,
+  in_production: true,
+  seasons: [
+    { season_number: 0, name: 'Especiales', episode_count: 3, air_date: null, poster_url: null },
+    { season_number: 1, name: 'Temporada 1', episode_count: 9, air_date: '2022-02-17', poster_url: null },
+  ],
+  cached_at: '2026-07-10T00:00:00+00:00',
+}
+
+const providers: SeriesProviders = {
+  country: 'ES',
+  link: 'https://tmdb.org/x',
+  flatrate: [
+    { provider_id: 350, provider_name: 'Apple TV+', logo_url: 'https://image.tmdb.org/t/p/w92/a.jpg', display_priority: 1 },
+  ],
+  rent: [],
+  buy: [],
+}
+
+const season1: SeasonDetail = {
+  series_tmdb_id: 95396,
+  season_number: 1,
+  name: 'Temporada 1',
+  episodes: [
+    { tmdb_id: 1, season_number: 1, episode_number: 1, name: 'Buenas noticias', air_date: '2022-02-17' },
+    { tmdb_id: 2, season_number: 1, episode_number: 2, name: 'Half Loop', air_date: '2022-02-18' },
+  ],
+}
+
+function renderPage() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={['/series/95396']}>
+        <Routes>
+          <Route path="/series/:tmdbId" element={<SeriesDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
+
+describe('SeriesDetailPage', () => {
+  it('shows header, streaming providers and lazily loads a season', async () => {
+    mockDetail.mockResolvedValue(detail)
+    mockProviders.mockResolvedValue(providers)
+    mockSeason.mockResolvedValue(season1)
+    renderPage()
+
+    // Cabecera
+    expect(await screen.findByRole('heading', { name: 'Separación', level: 1 })).toBeInTheDocument()
+    expect(screen.getByText('Drama')).toBeInTheDocument()
+    expect(screen.getByText('2022–2025')).toBeInTheDocument()
+
+    // Dónde verla (flatrate)
+    expect(await screen.findByRole('img', { name: 'Apple TV+' })).toBeInTheDocument()
+
+    // La temporada 0 (especiales) está oculta; solo aparece la 1.
+    expect(screen.queryByText('Especiales')).not.toBeInTheDocument()
+    const seasonButton = screen.getByRole('button', { name: /Temporada 1/ })
+
+    // Los episodios no se piden hasta desplegar.
+    expect(mockSeason).not.toHaveBeenCalled()
+    await userEvent.click(seasonButton)
+
+    expect(await screen.findByText('Buenas noticias')).toBeInTheDocument()
+    expect(screen.getByText('Half Loop')).toBeInTheDocument()
+    expect(mockSeason).toHaveBeenCalledWith(95396, 1)
+  })
+
+  it('shows a not-found message on 404', async () => {
+    const { ApiError } = await import('../api/client')
+    mockDetail.mockRejectedValue(new ApiError(404, 'Serie no encontrada'))
+    mockProviders.mockResolvedValue(providers)
+    renderPage()
+
+    expect(await screen.findByText('Serie no encontrada.')).toBeInTheDocument()
+  })
+})
