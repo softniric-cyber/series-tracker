@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, series, users
+from app.api import auth, me, series, users
 from app.core.config import get_settings
 from app.services.tmdb_client import TMDBClient
 
@@ -34,6 +34,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(series.router)
+app.include_router(me.router)
 
 
 @app.get("/health", tags=["health"])

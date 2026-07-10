@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import RegisterPage from './pages/RegisterPage'
+import MySeriesPage from './pages/MySeriesPage'
 import SearchPage from './pages/SearchPage'
 import SeriesDetailPage from './pages/SeriesDetailPage'
 
@@ -20,6 +21,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/mis-series" element={<MySeriesPage />} />
           <Route path="/series/:tmdbId" element={<SeriesDetailPage />} />
         </Route>
       </Route>

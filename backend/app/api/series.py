@@ -12,6 +12,7 @@ from app.schemas.series import (
     SeriesProviders,
     SeriesSearchResponse,
 )
+from app.services import tracking
 from app.services.series import build_series_providers, search_series
 from app.services.series_cache import (
     get_season,
@@ -53,7 +54,9 @@ async def series_detail(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Serie no encontrada"
         ) from exc
-    return to_series_detail(series, get_settings().tmdb_image_base_url)
+    detail = to_series_detail(series, get_settings().tmdb_image_base_url)
+    detail.is_following = tracking.is_following(db, current_user.id, tmdb_id)
+    return detail
 
 
 @router.get("/{tmdb_id}/seasons/{season_number}", response_model=SeasonDetail)

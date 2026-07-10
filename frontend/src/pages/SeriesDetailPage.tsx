@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getSeriesDetail, getSeriesProviders } from '../api/series'
+import { followSeries, unfollowSeries } from '../api/me'
 import { ApiError } from '../api/client'
 import type { SeasonSummary, SeriesDetail } from '../api/types'
 import SeasonEpisodes from '../components/SeasonEpisodes'
@@ -14,6 +15,38 @@ function yearRange(detail: SeriesDetail): string | null {
   if (!from) return null
   if (!to || to === from) return from
   return `${from}–${to}`
+}
+
+function FollowButton({ tmdbId, isFollowing }: { tmdbId: number; isFollowing: boolean }) {
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (isFollowing) await unfollowSeries(tmdbId)
+      else await followSeries(tmdbId)
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['series', tmdbId] }),
+        queryClient.invalidateQueries({ queryKey: ['mySeries'] }),
+      ])
+    },
+  })
+
+  return (
+    <button
+      type="button"
+      onClick={() => mutation.mutate()}
+      disabled={mutation.isPending}
+      aria-pressed={isFollowing}
+      className={
+        isFollowing
+          ? 'inline-flex items-center gap-2 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:border-red-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-60 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-red-950/40'
+          : 'inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60'
+      }
+    >
+      {isFollowing ? '✓ Siguiendo' : '+ Seguir'}
+    </button>
+  )
 }
 
 function WhereToWatch({ tmdbId }: { tmdbId: number }) {
@@ -168,6 +201,8 @@ export default function SeriesDetailPage() {
               {data.overview}
             </p>
           )}
+
+          <FollowButton tmdbId={id} isFollowing={data.is_following} />
         </div>
       </header>
 

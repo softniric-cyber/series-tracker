@@ -24,6 +24,9 @@ export default function Navbar() {
           <NavLink to="/search" className={navClass}>
             Buscar
           </NavLink>
+          <NavLink to="/mis-series" className={navClass}>
+            Mis series
+          </NavLink>
         </nav>
         <div className="ml-auto flex items-center gap-3">
           {user && (
