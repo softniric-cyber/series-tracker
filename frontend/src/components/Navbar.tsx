@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import logoIcon from '../assets/logo-icon.svg'
 
 const linkBase = 'rounded-md px-3 py-1.5 text-sm font-medium transition'
 
@@ -14,8 +15,9 @@ export default function Navbar() {
   return (
     <header className="border-b border-neutral-200 bg-white/80 backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/80">
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-        <NavLink to="/" className="text-lg font-bold tracking-tight text-brand-600">
-          SeriesTracker
+        <NavLink to="/" className="flex items-center gap-2">
+          <img src={logoIcon} alt="" className="h-7 w-7" />
+          <span className="text-lg font-bold tracking-tight text-brand-600">SeriesTracker</span>
         </NavLink>
         <nav className="flex items-center gap-1">
           <NavLink to="/" end className={navClass}>
