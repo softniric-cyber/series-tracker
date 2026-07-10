@@ -22,6 +22,12 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5173"
 
+    # Rate limiting en los endpoints de auth (se desactiva en los tests).
+    rate_limit_enabled: bool = True
+    rate_limit_login: str = "10/minute"
+    rate_limit_register: str = "10/hour"
+    rate_limit_refresh: str = "30/minute"
+
     @field_validator("database_url")
     @classmethod
     def _force_psycopg_driver(cls, v: str) -> str:

@@ -1,8 +1,10 @@
 """Endpoints de autenticación: registro, login y refresco de tokens."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 from app.api.deps import DbSession
+from app.core.config import get_settings
+from app.core.ratelimit import limiter
 from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenPair
 from app.services import auth as auth_service
 from app.services.security import (
@@ -13,6 +15,7 @@ from app.services.security import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+_settings = get_settings()
 
 
 def _token_pair_for(user_id: str) -> TokenPair:
@@ -23,7 +26,8 @@ def _token_pair_for(user_id: str) -> TokenPair:
 
 
 @router.post("/register", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
-def register(payload: RegisterRequest, db: DbSession) -> TokenPair:
+@limiter.limit(_settings.rate_limit_register)
+def register(request: Request, payload: RegisterRequest, db: DbSession) -> TokenPair:
     try:
         user = auth_service.register_user(
             db,
@@ -40,7 +44,8 @@ def register(payload: RegisterRequest, db: DbSession) -> TokenPair:
 
 
 @router.post("/login", response_model=TokenPair)
-def login(payload: LoginRequest, db: DbSession) -> TokenPair:
+@limiter.limit(_settings.rate_limit_login)
+def login(request: Request, payload: LoginRequest, db: DbSession) -> TokenPair:
     try:
         user = auth_service.authenticate_user(db, email=payload.email, password=payload.password)
     except auth_service.InvalidCredentialsError:
@@ -52,7 +57,8 @@ def login(payload: LoginRequest, db: DbSession) -> TokenPair:
 
 
 @router.post("/refresh", response_model=TokenPair)
-def refresh(payload: RefreshRequest, db: DbSession) -> TokenPair:
+@limiter.limit(_settings.rate_limit_refresh)
+def refresh(request: Request, payload: RefreshRequest, db: DbSession) -> TokenPair:
     try:
         subject = decode_token(payload.refresh_token, "refresh")
     except TokenError:
