@@ -1,0 +1,25 @@
+name: Keep backend warm
+
+# El backend en el plan free de Render se duerme tras ~15 min de inactividad y
+# tarda ~30 s en despertar. Este ping periódico a /health evita el arranque en
+# frío. Repo público → GitHub Actions gratis; el servicio se mantiene dentro de
+# las 750 h/mes gratuitas de Render (24/7 ≈ 730 h).
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+# No canceles pings en curso si se solapan.
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Ping /health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake the backend
+        run: |
+          # --max-time 90 espera a que termine el arranque en frío en vez de fallar.
+          curl -fsS --max-time 90 https://series-tracker-api-jqx1.onrender.com/health
