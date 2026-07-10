@@ -69,6 +69,14 @@ export interface EpisodeSummary {
   episode_number: number
   name: string | null
   air_date: string | null
+  watched: boolean
+}
+
+export interface SeriesProgress {
+  tmdb_id: number
+  total_episodes: number
+  watched_episodes: number
+  next_episode: EpisodeSummary | null
 }
 
 export interface SeasonDetail {

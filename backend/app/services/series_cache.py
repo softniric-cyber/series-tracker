@@ -218,7 +218,12 @@ def to_series_detail(series: Series, image_base: str) -> SeriesDetail:
     )
 
 
-def to_season_detail(series: Series, season_number: int, episodes: list[Episode]) -> SeasonDetail:
+def to_season_detail(
+    series: Series,
+    season_number: int,
+    episodes: list[Episode],
+    watched_ids: frozenset[int] = frozenset(),
+) -> SeasonDetail:
     name = next(
         (
             s.get("name")
@@ -238,6 +243,7 @@ def to_season_detail(series: Series, season_number: int, episodes: list[Episode]
                 episode_number=ep.episode_number,
                 name=ep.name,
                 air_date=ep.air_date,
+                watched=ep.tmdb_id in watched_ids,
             )
             for ep in episodes
         ],

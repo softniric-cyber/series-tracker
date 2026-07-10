@@ -75,7 +75,8 @@ async def season_detail(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Serie o temporada no encontrada"
         ) from exc
-    return to_season_detail(series, season_number, episodes)
+    watched = tracking.watched_ids_for_season(db, current_user.id, tmdb_id, season_number)
+    return to_season_detail(series, season_number, episodes, watched)
 
 
 @router.get("/{tmdb_id}/providers", response_model=SeriesProviders)
