@@ -65,6 +65,66 @@ function DayCell({
   )
 }
 
+function AgendaList({
+  days,
+  byDay,
+}: {
+  days: Date[]
+  byDay: Map<string, CalendarEntry[]>
+}) {
+  const daysWithEntries = days.filter((d) => byDay.has(toKey(d)))
+  if (daysWithEntries.length === 0) return null
+
+  return (
+    <ul className="divide-y divide-neutral-200 overflow-hidden rounded-xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+      {daysWithEntries.map((date) => {
+        const key = toKey(date)
+        const isToday = key === TODAY_KEY
+        return (
+          <li key={key} className="bg-white p-4 dark:bg-neutral-900">
+            <div className="mb-2 flex items-center gap-2">
+              <span
+                className={
+                  isToday
+                    ? 'flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white'
+                    : 'text-sm font-semibold text-neutral-500'
+                }
+              >
+                {date.getDate()}
+              </span>
+              <span className="text-sm capitalize text-neutral-500">
+                {date.toLocaleDateString('es-ES', { weekday: 'long', month: 'short' })}
+              </span>
+            </div>
+            <ul className="space-y-1.5">
+              {(byDay.get(key) ?? []).map((e) => (
+                <li key={e.episode_tmdb_id}>
+                  <Link
+                    to={`/series/${e.series_tmdb_id}`}
+                    className="block rounded-lg bg-brand-50 px-3 py-2 transition hover:bg-brand-100 dark:bg-brand-500/10 dark:hover:bg-brand-500/20"
+                  >
+                    <span className="text-sm font-medium text-brand-700 dark:text-brand-400">
+                      {e.series_name}
+                    </span>{' '}
+                    <span className="text-sm text-brand-500/80">
+                      T{e.season_number}·E{e.episode_number}
+                    </span>
+                    {e.episode_name && (
+                      <span className="mt-0.5 block truncate text-xs text-neutral-500">
+                        {e.episode_name}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 export default function CalendarPage() {
   const [view, setView] = useState<View>('month')
   const [anchor, setAnchor] = useState(() => new Date())
@@ -158,7 +218,8 @@ export default function CalendarPage() {
         <p className="text-sm text-red-600">No se pudo cargar el calendario. Inténtalo de nuevo.</p>
       )}
 
-      <div className="overflow-x-auto">
+      {/* Escritorio: cuadrícula de calendario. */}
+      <div className="hidden overflow-x-auto md:block">
         <div className="min-w-[640px]">
           <div className="grid grid-cols-7">
             {WEEKDAYS.map((d) => (
@@ -181,6 +242,11 @@ export default function CalendarPage() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Móvil: agenda vertical, solo los días con estrenos. */}
+      <div className="md:hidden">
+        <AgendaList days={days} byDay={byDay} />
       </div>
 
       {isPending && <Spinner label="Cargando calendario…" />}
