@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getSeriesDetail, getSeriesProviders } from '../api/series'
-import { followSeries, unfollowSeries } from '../api/me'
+import { followSeries, getProgress, unfollowSeries } from '../api/me'
 import { ApiError } from '../api/client'
 import type { SeasonSummary, SeriesDetail } from '../api/types'
 import SeasonEpisodes from '../components/SeasonEpisodes'
@@ -49,6 +49,45 @@ function FollowButton({ tmdbId, isFollowing }: { tmdbId: number; isFollowing: bo
   )
 }
 
+function Progress({ tmdbId }: { tmdbId: number }) {
+  const { data, isPending, isError } = useQuery({
+    queryKey: ['progress', tmdbId],
+    queryFn: () => getProgress(tmdbId),
+  })
+
+  if (isPending || isError || data.total_episodes === 0) return null
+
+  const percent = Math.round((data.watched_episodes / data.total_episodes) * 100)
+  const next = data.next_episode
+
+  return (
+    <section className={cardClass}>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-lg font-semibold">Tu progreso</h2>
+        <span className="text-sm text-neutral-500">
+          {data.watched_episodes} / {data.total_episodes} · {percent}%
+        </span>
+      </div>
+      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
+        <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${percent}%` }} />
+      </div>
+      <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">
+        {next ? (
+          <>
+            Siguiente por ver:{' '}
+            <span className="font-medium">
+              T{next.season_number}·E{next.episode_number}
+              {next.name ? ` — ${next.name}` : ''}
+            </span>
+          </>
+        ) : (
+          '¡Estás al día! 🎉'
+        )}
+      </p>
+    </section>
+  )
+}
+
 function WhereToWatch({ tmdbId }: { tmdbId: number }) {
   const { data, isPending, isError } = useQuery({
     queryKey: ['providers', tmdbId],
@@ -92,7 +131,15 @@ function WhereToWatch({ tmdbId }: { tmdbId: number }) {
   )
 }
 
-function SeasonRow({ seriesId, season }: { seriesId: number; season: SeasonSummary }) {
+function SeasonRow({
+  seriesId,
+  season,
+  following,
+}: {
+  seriesId: number
+  season: SeasonSummary
+  following: boolean
+}) {
   const [open, setOpen] = useState(false)
   return (
     <div className="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800">
@@ -112,7 +159,11 @@ function SeasonRow({ seriesId, season }: { seriesId: number; season: SeasonSumma
       </button>
       {open && (
         <div className="border-t border-neutral-200 dark:border-neutral-800">
-          <SeasonEpisodes seriesId={seriesId} seasonNumber={season.season_number} />
+          <SeasonEpisodes
+            seriesId={seriesId}
+            seasonNumber={season.season_number}
+            following={following}
+          />
         </div>
       )}
     </div>
@@ -206,6 +257,8 @@ export default function SeriesDetailPage() {
         </div>
       </header>
 
+      {data.is_following && <Progress tmdbId={id} />}
+
       <WhereToWatch tmdbId={id} />
 
       <section className="space-y-2">
@@ -215,7 +268,12 @@ export default function SeriesDetailPage() {
         ) : (
           <div className="space-y-2">
             {seasons.map((s) => (
-              <SeasonRow key={s.season_number} seriesId={id} season={s} />
+              <SeasonRow
+                key={s.season_number}
+                seriesId={id}
+                season={s}
+                following={data.is_following}
+              />
             ))}
           </div>
         )}

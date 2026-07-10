@@ -16,9 +16,19 @@ vi.mock('../api/series', () => ({
 
 const mockFollow = vi.fn()
 const mockUnfollow = vi.fn()
+const mockProgress = vi.fn()
+const mockMarkEpisode = vi.fn()
+const mockUnmarkEpisode = vi.fn()
+const mockMarkSeason = vi.fn()
+const mockUnmarkSeason = vi.fn()
 vi.mock('../api/me', () => ({
   followSeries: (id: number) => mockFollow(id),
   unfollowSeries: (id: number) => mockUnfollow(id),
+  getProgress: (id: number) => mockProgress(id),
+  markEpisodeWatched: (id: number) => mockMarkEpisode(id),
+  unmarkEpisodeWatched: (id: number) => mockUnmarkEpisode(id),
+  markSeasonWatched: (id: number, n: number) => mockMarkSeason(id, n),
+  unmarkSeasonWatched: (id: number, n: number) => mockUnmarkSeason(id, n),
 }))
 
 import SeriesDetailPage from './SeriesDetailPage'
@@ -58,8 +68,8 @@ const season1: SeasonDetail = {
   season_number: 1,
   name: 'Temporada 1',
   episodes: [
-    { tmdb_id: 1, season_number: 1, episode_number: 1, name: 'Buenas noticias', air_date: '2022-02-17' },
-    { tmdb_id: 2, season_number: 1, episode_number: 2, name: 'Half Loop', air_date: '2022-02-18' },
+    { tmdb_id: 1, season_number: 1, episode_number: 1, name: 'Buenas noticias', air_date: '2022-02-17', watched: false },
+    { tmdb_id: 2, season_number: 1, episode_number: 2, name: 'Half Loop', air_date: '2022-02-18', watched: false },
   ],
 }
 
@@ -118,9 +128,47 @@ describe('SeriesDetailPage', () => {
   it('shows the following state when already followed', async () => {
     mockDetail.mockResolvedValue({ ...detail, is_following: true })
     mockProviders.mockResolvedValue(providers)
+    mockProgress.mockResolvedValue({
+      tmdb_id: 95396,
+      total_episodes: 9,
+      watched_episodes: 3,
+      next_episode: null,
+    })
     renderPage()
 
     expect(await screen.findByRole('button', { name: /Siguiendo/ })).toBeInTheDocument()
+  })
+
+  it('shows progress and marks an episode watched when following', async () => {
+    mockDetail.mockResolvedValue({ ...detail, is_following: true })
+    mockProviders.mockResolvedValue(providers)
+    mockProgress.mockResolvedValue({
+      tmdb_id: 95396,
+      total_episodes: 9,
+      watched_episodes: 3,
+      next_episode: {
+        tmdb_id: 4,
+        season_number: 1,
+        episode_number: 4,
+        name: 'El episodio 4',
+        air_date: '2022-03-10',
+        watched: false,
+      },
+    })
+    mockSeason.mockResolvedValue(season1)
+    mockMarkEpisode.mockResolvedValue(undefined)
+    renderPage()
+
+    // Barra de progreso con "siguiente por ver".
+    expect(await screen.findByText('Tu progreso')).toBeInTheDocument()
+    expect(screen.getByText(/3 \/ 9/)).toBeInTheDocument()
+    expect(screen.getByText(/T1·E4/)).toBeInTheDocument()
+
+    // Desplegar la temporada muestra checkboxes; marcar uno llama al API.
+    await userEvent.click(screen.getByRole('button', { name: /Temporada 1/ }))
+    const checkbox = await screen.findByRole('checkbox', { name: /Buenas noticias/ })
+    await userEvent.click(checkbox)
+    expect(mockMarkEpisode).toHaveBeenCalledWith(1)
   })
 
   it('shows a not-found message on 404', async () => {

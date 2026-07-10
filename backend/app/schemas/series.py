@@ -58,6 +58,8 @@ class EpisodeSummary(BaseModel):
     episode_number: int
     name: str | None
     air_date: date | None
+    # Visto por el usuario autenticado (S2-4).
+    watched: bool = False
 
 
 class SeasonDetail(BaseModel):
@@ -65,6 +67,20 @@ class SeasonDetail(BaseModel):
     season_number: int
     name: str | None
     episodes: list[EpisodeSummary]
+
+
+class SeriesProgress(BaseModel):
+    """Progreso de visionado de una serie (S2-4).
+
+    `total_episodes` y `watched_episodes` cuentan solo episodios ya emitidos
+    (air_date ≤ hoy) y no especiales. `next_episode` es el primer episodio
+    emitido sin ver, en orden; None si no queda nada por ver.
+    """
+
+    tmdb_id: int
+    total_episodes: int
+    watched_episodes: int
+    next_episode: EpisodeSummary | None
 
 
 class FollowedSeries(BaseModel):
