@@ -52,6 +52,15 @@ export interface SeriesDetail {
   in_production: boolean | null
   seasons: SeasonSummary[]
   cached_at: string
+  is_following: boolean
+}
+
+export interface FollowedSeries {
+  tmdb_id: number
+  name: string
+  poster_url: string | null
+  status: string | null
+  added_at: string
 }
 
 export interface EpisodeSummary {

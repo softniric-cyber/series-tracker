@@ -48,6 +48,8 @@ class SeriesDetail(BaseModel):
     in_production: bool | None
     seasons: list[SeasonSummary]
     cached_at: datetime
+    # Estado de seguimiento del usuario autenticado (S2-3).
+    is_following: bool = False
 
 
 class EpisodeSummary(BaseModel):
@@ -63,6 +65,16 @@ class SeasonDetail(BaseModel):
     season_number: int
     name: str | None
     episodes: list[EpisodeSummary]
+
+
+class FollowedSeries(BaseModel):
+    """Serie que el usuario sigue, para la página «Mis series» (S2-3)."""
+
+    tmdb_id: int
+    name: str
+    poster_url: str | None
+    status: str | None
+    added_at: datetime
 
 
 class WatchProvider(BaseModel):

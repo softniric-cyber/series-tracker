@@ -26,11 +26,17 @@ export default function HomePage() {
         </Link>
       </div>
 
-      <div className={`${cardClass} text-sm text-neutral-500`}>
-        <h2 className="text-base font-semibold text-neutral-700 dark:text-neutral-200">
-          Mis series
-        </h2>
-        <p className="mt-1">Podrás seguir series y llevar tu progreso próximamente (Sprint 2).</p>
+      <div className={cardClass}>
+        <h2 className="text-lg font-semibold">Mis series</h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          Consulta las series que sigues y accede a sus fichas.
+        </p>
+        <Link
+          to="/mis-series"
+          className="mt-4 inline-block rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+        >
+          Ver mis series
+        </Link>
       </div>
     </div>
   )

@@ -14,6 +14,13 @@ vi.mock('../api/series', () => ({
   getSeason: (id: number, n: number) => mockSeason(id, n),
 }))
 
+const mockFollow = vi.fn()
+const mockUnfollow = vi.fn()
+vi.mock('../api/me', () => ({
+  followSeries: (id: number) => mockFollow(id),
+  unfollowSeries: (id: number) => mockUnfollow(id),
+}))
+
 import SeriesDetailPage from './SeriesDetailPage'
 
 const detail: SeriesDetail = {
@@ -33,6 +40,7 @@ const detail: SeriesDetail = {
     { season_number: 1, name: 'Temporada 1', episode_count: 9, air_date: '2022-02-17', poster_url: null },
   ],
   cached_at: '2026-07-10T00:00:00+00:00',
+  is_following: false,
 }
 
 const providers: SeriesProviders = {
@@ -94,6 +102,25 @@ describe('SeriesDetailPage', () => {
     expect(await screen.findByText('Buenas noticias')).toBeInTheDocument()
     expect(screen.getByText('Half Loop')).toBeInTheDocument()
     expect(mockSeason).toHaveBeenCalledWith(95396, 1)
+  })
+
+  it('follows the series when clicking the follow button', async () => {
+    mockDetail.mockResolvedValue({ ...detail, is_following: false })
+    mockProviders.mockResolvedValue(providers)
+    mockFollow.mockResolvedValue({ tmdb_id: 95396 })
+    renderPage()
+
+    const followButton = await screen.findByRole('button', { name: /Seguir/ })
+    await userEvent.click(followButton)
+    expect(mockFollow).toHaveBeenCalledWith(95396)
+  })
+
+  it('shows the following state when already followed', async () => {
+    mockDetail.mockResolvedValue({ ...detail, is_following: true })
+    mockProviders.mockResolvedValue(providers)
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: /Siguiendo/ })).toBeInTheDocument()
   })
 
   it('shows a not-found message on 404', async () => {
