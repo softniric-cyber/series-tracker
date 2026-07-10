@@ -93,6 +93,19 @@ class FollowedSeries(BaseModel):
     added_at: datetime
 
 
+class CalendarEntry(BaseModel):
+    """Un episodio de una serie seguida que se emite en el rango consultado (S3-1)."""
+
+    series_tmdb_id: int
+    series_name: str
+    poster_url: str | None
+    episode_tmdb_id: int
+    season_number: int
+    episode_number: int
+    episode_name: str | None
+    air_date: date
+
+
 class WatchProvider(BaseModel):
     provider_id: int
     provider_name: str
