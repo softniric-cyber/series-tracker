@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cardClass } from './ui'
+import logoIcon from '../assets/logo-icon.svg'
 
 interface AuthShellProps {
   subtitle: string
@@ -11,6 +12,7 @@ export default function AuthShell({ subtitle, children, footer }: AuthShellProps
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
+        <img src={logoIcon} alt="" className="mx-auto mb-2 h-14 w-14" />
         <h1 className="mb-1 text-center text-2xl font-bold tracking-tight text-brand-600">
           SeriesTracker
         </h1>
