@@ -52,6 +52,18 @@ def get_user_by_id(db: Session, user_id: str) -> User | None:
     return db.get(User, uid)
 
 
+def get_user_by_email(db: Session, email: str) -> User | None:
+    return db.scalar(select(User).where(User.email == _normalize_email(email)))
+
+
+def set_password(db: Session, user: User, new_password: str) -> User:
+    """Cambia la contraseña (usado por el reset). Invalida enlaces de reset previos."""
+    user.password_hash = hash_password(new_password)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 def update_user_profile(
     db: Session, user: User, *, country: str | None, language: str | None
 ) -> User:

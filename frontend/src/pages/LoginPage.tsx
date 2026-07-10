@@ -88,6 +88,11 @@ export default function LoginPage() {
         <button type="submit" disabled={submitting} className={primaryButtonClass}>
           {submitting ? 'Entrando…' : 'Entrar'}
         </button>
+        <p className="text-center text-sm">
+          <Link to="/forgot-password" className="text-neutral-500 hover:text-brand-600 hover:underline">
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </p>
       </form>
     </AuthShell>
   )

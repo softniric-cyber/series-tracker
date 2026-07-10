@@ -27,6 +27,15 @@ class Settings(BaseSettings):
     rate_limit_login: str = "10/minute"
     rate_limit_register: str = "10/hour"
     rate_limit_refresh: str = "30/minute"
+    rate_limit_forgot: str = "5/hour"
+
+    # Recuperación de contraseña (S3-6).
+    reset_token_minutes: int = 30
+    # URL del frontend para construir el enlace de reset.
+    frontend_url: str = "http://localhost:5173"
+    # Envío de email (Resend). Sin API key, el enlace se registra en el log (dev/tests).
+    resend_api_key: str = ""
+    email_from: str = "SeriesTracker <onboarding@resend.dev>"
 
     @field_validator("database_url")
     @classmethod

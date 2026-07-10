@@ -24,3 +24,19 @@ export function register(
 export function getMe(): Promise<UserPublic> {
   return apiFetch<UserPublic>('/users/me')
 }
+
+export function forgotPassword(email: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>('/auth/forgot-password', {
+    method: 'POST',
+    body: { email },
+    auth: false,
+  })
+}
+
+export function resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>('/auth/reset-password', {
+    method: 'POST',
+    body: { token, new_password: newPassword },
+    auth: false,
+  })
+}
