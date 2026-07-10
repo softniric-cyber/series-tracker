@@ -44,15 +44,17 @@ describe('CalendarPage', () => {
     mockGetCalendar.mockResolvedValue([entryToday()])
     renderPage()
 
-    const link = await screen.findByRole('link', { name: /Juego de tronos/ })
-    expect(link).toHaveAttribute('href', '/series/1399')
-    expect(link).toHaveTextContent('T2·E3')
+    // Se renderizan la cuadrícula (escritorio) y la agenda (móvil): el enlace
+    // aparece en ambas (jsdom no aplica el CSS que oculta una).
+    const links = await screen.findAllByRole('link', { name: /Juego de tronos/ })
+    expect(links[0]).toHaveAttribute('href', '/series/1399')
+    expect(links[0]).toHaveTextContent('T2·E3')
   })
 
   it('switches to the week view and refetches a 7-day range', async () => {
     mockGetCalendar.mockResolvedValue([entryToday()])
     renderPage()
-    await screen.findByRole('link', { name: /Juego de tronos/ })
+    await screen.findAllByRole('link', { name: /Juego de tronos/ })
 
     await userEvent.click(screen.getByRole('button', { name: 'Semana' }))
 
@@ -60,7 +62,9 @@ describe('CalendarPage', () => {
     const [from, to] = mockGetCalendar.mock.calls.at(-1) as [string, string]
     const days = (new Date(to).getTime() - new Date(from).getTime()) / 86_400_000
     expect(days).toBe(6)
-    expect(await screen.findByRole('link', { name: /Juego de tronos/ })).toBeInTheDocument()
+    expect((await screen.findAllByRole('link', { name: /Juego de tronos/ })).length).toBeGreaterThan(
+      0,
+    )
   })
 
   it('shows an empty state when there are no premieres', async () => {
