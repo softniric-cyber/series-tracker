@@ -5,6 +5,11 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App'
 import { AuthProvider } from './auth/AuthContext'
+import { API_URL } from './lib/config'
+
+// Despierta el backend (Render free se duerme tras inactividad) en cuanto carga
+// la app, mientras el usuario llega al login → oculta el arranque en frío.
+void fetch(`${API_URL}/health`).catch(() => {})
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
