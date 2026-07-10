@@ -6,8 +6,13 @@ from fastapi import APIRouter, HTTPException, Path, Query, status
 
 from app.api.deps import CurrentUser, DbSession, TmdbClient
 from app.core.config import get_settings
-from app.schemas.series import SeasonDetail, SeriesDetail, SeriesSearchResponse
-from app.services.series import search_series
+from app.schemas.series import (
+    SeasonDetail,
+    SeriesDetail,
+    SeriesProviders,
+    SeriesSearchResponse,
+)
+from app.services.series import build_series_providers, search_series
 from app.services.series_cache import (
     get_season,
     get_series,
@@ -68,3 +73,22 @@ async def season_detail(
             status_code=status.HTTP_404_NOT_FOUND, detail="Serie o temporada no encontrada"
         ) from exc
     return to_season_detail(series, season_number, episodes)
+
+
+@router.get("/{tmdb_id}/providers", response_model=SeriesProviders)
+async def series_providers(
+    current_user: CurrentUser,
+    client: TmdbClient,
+    tmdb_id: Annotated[int, Path(ge=1)],
+) -> SeriesProviders:
+    try:
+        payload = await client.get_tv_watch_providers(tmdb_id)
+    except TMDBNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Serie no encontrada"
+        ) from exc
+    return build_series_providers(
+        payload,
+        country=current_user.country,
+        image_base=get_settings().tmdb_image_base_url,
+    )

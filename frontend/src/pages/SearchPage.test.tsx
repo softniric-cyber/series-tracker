@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import type { SeriesSearchResponse } from '../api/types'
 
 const mockSearch = vi.fn()
@@ -15,7 +16,9 @@ function renderSearch() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={queryClient}>
-      <SearchPage />
+      <MemoryRouter>
+        <SearchPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
