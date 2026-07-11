@@ -1,4 +1,4 @@
-# SeriesTracker — Pruebas de aceptación del MVP (S3-5)
+# trackmyseries — Pruebas de aceptación del MVP (S3-5)
 
 Verificación de los 5 criterios de aceptación del análisis funcional (§8) sobre el
 código desplegado en producción. Fecha: 2026-07-10.

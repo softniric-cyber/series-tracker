@@ -1,4 +1,4 @@
-# SeriesTracker — Análisis funcional (MVP v1.0)
+# trackmyseries — Análisis funcional (MVP v1.0)
 
 ## 1. Objetivo
 

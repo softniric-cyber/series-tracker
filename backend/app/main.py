@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await app.state.tmdb_client.aclose()
 
 
-app = FastAPI(title="SeriesTracker API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="trackmyseries API", version="0.1.0", lifespan=lifespan)
 
 # Rate limiting (slowapi): registra el limitador y el handler de 429.
 app.state.limiter = limiter

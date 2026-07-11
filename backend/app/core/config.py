@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:5173"
     # Envío de email (Resend). Sin API key, el enlace se registra en el log (dev/tests).
     resend_api_key: str = ""
-    email_from: str = "SeriesTracker <onboarding@resend.dev>"
+    email_from: str = "trackmyseries <onboarding@resend.dev>"
 
     @field_validator("database_url")
     @classmethod
