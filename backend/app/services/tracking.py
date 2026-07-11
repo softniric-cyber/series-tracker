@@ -16,7 +16,13 @@ from app.models.series import Series
 from app.models.user import User
 from app.models.user_series import UserSeries
 from app.models.watched_episode import WatchedEpisode
-from app.schemas.series import CalendarEntry, EpisodeSummary, FollowedSeries, SeriesProgress
+from app.schemas.series import (
+    CalendarEntry,
+    EpisodeSummary,
+    FollowedSeries,
+    SeasonProgress,
+    SeriesProgress,
+)
 from app.services.series_cache import get_season, get_series
 from app.services.tmdb_client import TMDBClient
 
@@ -209,11 +215,38 @@ async def get_progress(
         ),
         None,
     )
+
+    # Completitud por temporada, con la misma semántica «al día» que la barra de
+    # progreso: una temporada se marca cuando todos sus episodios EMITIDOS están
+    # vistos. `episodes` incluye los no emitidos solo para distinguir en la UI una
+    # temporada terminada («Vista») de una al día pero con estrenos pendientes.
+    season_total: dict[int, int] = {}
+    season_aired: dict[int, int] = {}
+    season_watched: dict[int, int] = {}
+    for ep in episodes:
+        season_total[ep.season_number] = season_total.get(ep.season_number, 0) + 1
+    for ep in aired:
+        season_aired[ep.season_number] = season_aired.get(ep.season_number, 0) + 1
+        if ep.tmdb_id in watched:
+            season_watched[ep.season_number] = season_watched.get(ep.season_number, 0) + 1
+    seasons = [
+        SeasonProgress(
+            season_number=n,
+            episodes=total,
+            aired=season_aired.get(n, 0),
+            watched=season_watched.get(n, 0),
+            completed=season_aired.get(n, 0) > 0
+            and season_watched.get(n, 0) == season_aired.get(n, 0),
+        )
+        for n, total in sorted(season_total.items())
+    ]
+
     return SeriesProgress(
         tmdb_id=tmdb_id,
         total_episodes=len(aired),
         watched_episodes=sum(1 for ep in aired if ep.tmdb_id in watched),
         next_episode=next_episode,
+        seasons=seasons,
     )
 
 

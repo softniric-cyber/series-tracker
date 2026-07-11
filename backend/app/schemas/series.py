@@ -69,18 +69,36 @@ class SeasonDetail(BaseModel):
     episodes: list[EpisodeSummary]
 
 
+class SeasonProgress(BaseModel):
+    """Progreso de una temporada, para marcarla como vista sin abrir el detalle.
+
+    `episodes` cuenta todos los episodios no especiales cacheados de la temporada
+    (emitidos o no); `aired` los ya emitidos (air_date ≤ hoy); `watched` los
+    vistos entre los emitidos. `completed` es True cuando el usuario está «al día»
+    con la temporada: hay episodios emitidos y todos están vistos.
+    """
+
+    season_number: int
+    episodes: int
+    aired: int
+    watched: int
+    completed: bool
+
+
 class SeriesProgress(BaseModel):
     """Progreso de visionado de una serie (S2-4).
 
     `total_episodes` y `watched_episodes` cuentan solo episodios ya emitidos
     (air_date ≤ hoy) y no especiales. `next_episode` es el primer episodio
-    emitido sin ver, en orden; None si no queda nada por ver.
+    emitido sin ver, en orden; None si no queda nada por ver. `seasons` desglosa
+    la completitud por temporada (todos los episodios, para marcar «vista»).
     """
 
     tmdb_id: int
     total_episodes: int
     watched_episodes: int
     next_episode: EpisodeSummary | None
+    seasons: list[SeasonProgress]
 
 
 class FollowedSeries(BaseModel):
