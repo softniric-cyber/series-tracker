@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import logoIcon from '../assets/logo-icon.svg'
+import Wordmark from './Wordmark'
 
 const linkBase = 'rounded-md px-3 py-1.5 text-sm font-medium transition'
 
@@ -17,7 +18,7 @@ export default function Navbar() {
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
         <NavLink to="/" className="flex items-center gap-2">
           <img src={logoIcon} alt="" className="h-7 w-7" />
-          <span className="text-lg font-bold tracking-tight text-brand-600">SeriesTracker</span>
+          <Wordmark className="text-lg" />
         </NavLink>
         <nav className="flex items-center gap-1">
           <NavLink to="/" end className={navClass}>

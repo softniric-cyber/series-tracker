@@ -1,4 +1,4 @@
-# SeriesTracker — Checklist de seguridad (§7)
+# trackmyseries — Checklist de seguridad (§7)
 
 Revisión de seguridad del MVP (S3-4). Cada punto del §7 de la arquitectura, con su
 estado y dónde vive en el código.

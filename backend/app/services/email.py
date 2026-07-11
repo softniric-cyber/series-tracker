@@ -18,7 +18,7 @@ _RESEND_URL = "https://api.resend.com/emails"
 
 def _reset_html(reset_link: str, minutes: int) -> str:
     return (
-        f"<p>Has solicitado restablecer tu contraseña en SeriesTracker.</p>"
+        f"<p>Has solicitado restablecer tu contraseña en trackmyseries.</p>"
         f'<p><a href="{reset_link}">Pulsa aquí para elegir una nueva contraseña</a> '
         f"(el enlace caduca en {minutes} minutos).</p>"
         f"<p>Si no has sido tú, ignora este correo: tu contraseña no cambiará.</p>"
@@ -36,7 +36,7 @@ async def send_password_reset(to_email: str, reset_link: str) -> None:
     payload = {
         "from": settings.email_from,
         "to": [to_email],
-        "subject": "Restablece tu contraseña — SeriesTracker",
+        "subject": "Restablece tu contraseña — trackmyseries",
         "html": _reset_html(reset_link, settings.reset_token_minutes),
     }
     try:

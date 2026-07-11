@@ -1,4 +1,4 @@
-# SeriesTracker — Instrucciones de trabajo para el equipo
+# trackmyseries — Instrucciones de trabajo para el equipo
 
 ## 1. Organización
 

@@ -1,4 +1,4 @@
-# SeriesTracker — Despliegue (Sprint 0)
+# trackmyseries — Despliegue (Sprint 0)
 
 ## CI (automático)
 

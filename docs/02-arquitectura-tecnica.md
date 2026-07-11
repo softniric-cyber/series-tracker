@@ -1,4 +1,4 @@
-# SeriesTracker — Arquitectura técnica
+# trackmyseries — Arquitectura técnica
 
 ## 1. Visión general
 
