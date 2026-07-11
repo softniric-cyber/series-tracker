@@ -121,6 +121,19 @@ def test_mark_season_updates_progress_instantly(client: TestClient, with_tmdb: N
     assert prog["total_episodes"] == 3
     assert prog["next_episode"]["tmdb_id"] == 201  # primer emitido sin ver de T2
 
+    # Desglose por temporada: T1 al día (2/2 emitidos), T2 no (0/1 emitido visto).
+    seasons = {s["season_number"]: s for s in prog["seasons"]}
+    assert seasons[1] == {
+        "season_number": 1,
+        "episodes": 2,
+        "aired": 2,
+        "watched": 2,
+        "completed": True,
+    }
+    assert seasons[2]["completed"] is False
+    assert seasons[2]["aired"] == 1  # 201 emitido, 202 aún no
+    assert seasons[2]["watched"] == 0
+
     # La temporada refleja los episodios vistos.
     season = client.get("/series/1/seasons/1", headers=headers).json()
     assert all(ep["watched"] for ep in season["episodes"])

@@ -133,10 +133,33 @@ describe('SeriesDetailPage', () => {
       total_episodes: 9,
       watched_episodes: 3,
       next_episode: null,
+      seasons: [],
     })
     renderPage()
 
     expect(await screen.findByRole('button', { name: /Siguiendo/ })).toBeInTheDocument()
+  })
+
+  it('marks a fully-watched season as "Vista" in the list without expanding', async () => {
+    mockDetail.mockResolvedValue({ ...detail, is_following: true })
+    mockProviders.mockResolvedValue(providers)
+    mockProgress.mockResolvedValue({
+      tmdb_id: 95396,
+      total_episodes: 9,
+      watched_episodes: 9,
+      next_episode: null,
+      // T1 emitida por completo y toda vista → «Vista».
+      seasons: [{ season_number: 1, episodes: 9, aired: 9, watched: 9, completed: true }],
+    })
+    renderPage()
+
+    // El distintivo aparece en la lista, con la temporada aún colapsada.
+    expect(await screen.findByText(/✓ Vista/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Temporada 1/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+    expect(screen.queryByText('Buenas noticias')).not.toBeInTheDocument()
   })
 
   it('shows progress and marks an episode watched when following', async () => {

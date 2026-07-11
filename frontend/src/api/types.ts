@@ -72,11 +72,20 @@ export interface EpisodeSummary {
   watched: boolean
 }
 
+export interface SeasonProgress {
+  season_number: number
+  episodes: number
+  aired: number
+  watched: number
+  completed: boolean
+}
+
 export interface SeriesProgress {
   tmdb_id: number
   total_episodes: number
   watched_episodes: number
   next_episode: EpisodeSummary | null
+  seasons: SeasonProgress[]
 }
 
 export interface UserDataExport {

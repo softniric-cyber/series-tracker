@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getSeriesDetail, getSeriesProviders } from '../api/series'
 import { followSeries, getProgress, unfollowSeries } from '../api/me'
 import { ApiError } from '../api/client'
-import type { SeasonSummary, SeriesDetail } from '../api/types'
+import type { SeasonProgress, SeasonSummary, SeriesDetail, SeriesProgress } from '../api/types'
 import SeasonEpisodes from '../components/SeasonEpisodes'
 import Spinner from '../components/Spinner'
 import { cardClass } from '../components/ui'
@@ -49,13 +49,8 @@ function FollowButton({ tmdbId, isFollowing }: { tmdbId: number; isFollowing: bo
   )
 }
 
-function Progress({ tmdbId }: { tmdbId: number }) {
-  const { data, isPending, isError } = useQuery({
-    queryKey: ['progress', tmdbId],
-    queryFn: () => getProgress(tmdbId),
-  })
-
-  if (isPending || isError || data.total_episodes === 0) return null
+function Progress({ data }: { data: SeriesProgress }) {
+  if (data.total_episodes === 0) return null
 
   const percent = Math.round((data.watched_episodes / data.total_episodes) * 100)
   const next = data.next_episode
@@ -131,16 +126,40 @@ function WhereToWatch({ tmdbId }: { tmdbId: number }) {
   )
 }
 
+function SeasonStatus({ progress }: { progress: SeasonProgress }) {
+  if (progress.completed) {
+    // «Vista» si la temporada emitió por completo; «Al día» si aún le quedan estrenos.
+    const label = progress.aired >= progress.episodes ? 'Vista' : 'Al día'
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-500/15 dark:text-green-400">
+        ✓ {label}
+      </span>
+    )
+  }
+  if (progress.watched > 0) {
+    return (
+      <span className="text-sm text-neutral-500">
+        {progress.watched}/{progress.aired} vistos
+      </span>
+    )
+  }
+  return null
+}
+
 function SeasonRow({
   seriesId,
   season,
   following,
+  progress,
 }: {
   seriesId: number
   season: SeasonSummary
   following: boolean
+  progress?: SeasonProgress
 }) {
   const [open, setOpen] = useState(false)
+  // El resumen de progreso reemplaza al conteo de episodios cuando aporta info.
+  const showStatus = progress != null && (progress.completed || progress.watched > 0)
   return (
     <div className="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800">
       <button
@@ -149,9 +168,14 @@ function SeasonRow({
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-3 bg-white px-4 py-3 text-left transition hover:bg-neutral-50 dark:bg-neutral-900 dark:hover:bg-neutral-800"
       >
-        <span className="font-medium">{season.name ?? `Temporada ${season.season_number}`}</span>
-        <span className="flex items-center gap-3 text-sm text-neutral-500">
-          {season.episode_count != null && <span>{season.episode_count} ep.</span>}
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate font-medium">
+            {season.name ?? `Temporada ${season.season_number}`}
+          </span>
+          {progress && <SeasonStatus progress={progress} />}
+        </span>
+        <span className="flex shrink-0 items-center gap-3 text-sm text-neutral-500">
+          {!showStatus && season.episode_count != null && <span>{season.episode_count} ep.</span>}
           <span aria-hidden className={open ? 'rotate-180 transition' : 'transition'}>
             ▾
           </span>
@@ -180,6 +204,14 @@ export default function SeriesDetailPage() {
     enabled: Number.isFinite(id),
   })
 
+  // El progreso (que cachea todas las temporadas en el backend) solo se pide si
+  // sigues la serie; alimenta tanto la barra como los distintivos por temporada.
+  const { data: progress } = useQuery({
+    queryKey: ['progress', id],
+    queryFn: () => getProgress(id),
+    enabled: Number.isFinite(id) && data?.is_following === true,
+  })
+
   if (isPending) return <Spinner label="Cargando ficha…" />
 
   if (isError) {
@@ -199,6 +231,9 @@ export default function SeriesDetailPage() {
   const years = yearRange(data)
   // Ocultamos la temporada 0 (especiales) de la lista principal.
   const seasons = data.seasons.filter((s) => s.season_number !== 0)
+  const progressBySeason = new Map<number, SeasonProgress>(
+    (progress?.seasons ?? []).map((s) => [s.season_number, s]),
+  )
 
   return (
     <div className="space-y-6">
@@ -257,7 +292,7 @@ export default function SeriesDetailPage() {
         </div>
       </header>
 
-      {data.is_following && <Progress tmdbId={id} />}
+      {data.is_following && progress && <Progress data={progress} />}
 
       <WhereToWatch tmdbId={id} />
 
@@ -273,6 +308,7 @@ export default function SeriesDetailPage() {
                 seriesId={id}
                 season={s}
                 following={data.is_following}
+                progress={progressBySeason.get(s.season_number)}
               />
             ))}
           </div>
