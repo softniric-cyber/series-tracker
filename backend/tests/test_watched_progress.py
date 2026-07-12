@@ -87,8 +87,74 @@ def _mock_series() -> None:
     )
 
 
+def _mock_ended_series() -> None:
+    """Serie finalizada: 1 temporada con 2 episodios, todos emitidos, sin futuros."""
+    respx.get(f"{BASE}/tv/2").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": 2,
+                "name": "Fin",
+                "status": "Ended",
+                "number_of_seasons": 1,
+                "seasons": [{"season_number": 1, "name": "T1", "episode_count": 2}],
+            },
+        )
+    )
+    respx.get(f"{BASE}/tv/2/season/1").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "season_number": 1,
+                "episodes": [
+                    {"id": 301, "season_number": 1, "episode_number": 1, "air_date": PAST},
+                    {"id": 302, "season_number": 1, "episode_number": 2, "air_date": PAST},
+                ],
+            },
+        )
+    )
+
+
 def test_watched_requires_auth(client: TestClient) -> None:
     assert client.put("/me/episodes/101/watched").status_code == 401
+
+
+@respx.mock
+def test_my_series_categories(client: TestClient, with_tmdb: None) -> None:
+    headers = _auth_headers(client)
+    _mock_series()  # id 1: en emisión, 3 eps emitidos + 1 futuro
+    _mock_ended_series()  # id 2: finalizada, 2 eps emitidos
+
+    client.post("/me/series/1", headers=headers)
+    client.post("/me/series/2", headers=headers)
+    # Cachear los episodios de ambas (el progreso cachea todas las temporadas).
+    client.get("/me/series/1/progress", headers=headers)
+    client.get("/me/series/2/progress", headers=headers)
+
+    def categories() -> dict[int, str]:
+        listed = client.get("/me/series", headers=headers).json()
+        return {s["tmdb_id"]: s["category"] for s in listed}
+
+    # Sin ver nada → «sin comenzar».
+    assert categories() == {1: "not_started", 2: "not_started"}
+
+    # Ver un episodio emitido de la serie 1 → «en curso».
+    client.put("/me/episodes/101/watched", headers=headers)
+    assert categories()[1] == "watching"
+
+    # Ver todos los episodios emitidos de la 1 (queda el futuro 202) → «al día».
+    client.put("/me/episodes/102/watched", headers=headers)
+    client.put("/me/episodes/201/watched", headers=headers)
+    assert categories()[1] == "up_to_date"
+
+    # Ver la serie 2 entera (finalizada, todo emitido) → «finalizada».
+    client.put("/me/series/2/seasons/1/watched", headers=headers)
+    assert categories()[2] == "finished"
+
+    # Contadores expuestos (solo episodios emitidos, no especiales).
+    listed = {s["tmdb_id"]: s for s in client.get("/me/series", headers=headers).json()}
+    assert (listed[1]["aired_episodes"], listed[1]["watched_episodes"]) == (3, 3)
+    assert (listed[2]["aired_episodes"], listed[2]["watched_episodes"]) == (2, 2)
 
 
 @respx.mock

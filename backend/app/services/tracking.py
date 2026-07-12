@@ -8,7 +8,7 @@ cachea con `series_cache.get_series` (que la trae de TMDB si hace falta).
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.episode import Episode
@@ -19,11 +19,12 @@ from app.models.watched_episode import WatchedEpisode
 from app.schemas.series import (
     CalendarEntry,
     EpisodeSummary,
+    FollowedCategory,
     FollowedSeries,
     SeasonProgress,
     SeriesProgress,
 )
-from app.services.series_cache import get_season, get_series
+from app.services.series_cache import FINISHED_STATUSES, get_season, get_series
 from app.services.tmdb_client import TMDBClient
 
 _POSTER_SIZE = "w342"
@@ -81,14 +82,102 @@ def list_followed(db: Session, user: User) -> list[tuple[Series, datetime]]:
     return [(series, added_at) for series, added_at in db.execute(stmt).all()]
 
 
-def to_followed(series: Series, added_at: datetime, image_base: str) -> FollowedSeries:
+def categorize(status: str | None, total: int, aired: int, watched: int) -> FollowedCategory:
+    """Clasifica una serie seguida según su progreso de visionado.
+
+    - «not_started»: no se ha visto ningún episodio emitido.
+    - «watching»: hay episodios emitidos sin ver (queda algo por ver ahora).
+    - «up_to_date»: al día con lo emitido, pero habrá nuevos episodios (la serie no
+      ha finalizado o hay episodios futuros ya cacheados).
+    - «finished»: al día y la serie terminó (no habrá nuevas temporadas).
+
+    Los conteos usan solo episodios emitidos y no especiales; `total` incluye además
+    los no emitidos ya cacheados, para detectar contenido futuro conocido.
+    """
+    if watched == 0:
+        return "not_started"
+    if watched < aired:
+        return "watching"
+    # watched >= aired: el usuario ha visto todo lo emitido.
+    more_coming = status not in FINISHED_STATUSES or total > aired
+    return "up_to_date" if more_coming else "finished"
+
+
+def _episode_counts(db: Session, user_id: uuid.UUID) -> dict[int, tuple[int, int]]:
+    """Por serie seguida: (total episodios no especiales cacheados, ya emitidos)."""
+    today = date.today()
+    stmt = (
+        select(
+            Episode.series_tmdb_id,
+            func.count().label("total"),
+            func.count()
+            .filter(Episode.air_date.is_not(None), Episode.air_date <= today)
+            .label("aired"),
+        )
+        .join(UserSeries, UserSeries.series_tmdb_id == Episode.series_tmdb_id)
+        .where(UserSeries.user_id == user_id, Episode.season_number >= 1)
+        .group_by(Episode.series_tmdb_id)
+    )
+    return {row.series_tmdb_id: (row.total, row.aired) for row in db.execute(stmt)}
+
+
+def _watched_aired_counts(db: Session, user_id: uuid.UUID) -> dict[int, int]:
+    """Por serie: nº de episodios emitidos y no especiales que el usuario ha visto."""
+    today = date.today()
+    stmt = (
+        select(Episode.series_tmdb_id, func.count())
+        .join(WatchedEpisode, WatchedEpisode.episode_tmdb_id == Episode.tmdb_id)
+        .where(
+            WatchedEpisode.user_id == user_id,
+            Episode.season_number >= 1,
+            Episode.air_date.is_not(None),
+            Episode.air_date <= today,
+        )
+        .group_by(Episode.series_tmdb_id)
+    )
+    return {series_tmdb_id: count for series_tmdb_id, count in db.execute(stmt)}
+
+
+def to_followed(
+    series: Series,
+    added_at: datetime,
+    image_base: str,
+    total: int = 0,
+    aired: int = 0,
+    watched: int = 0,
+) -> FollowedSeries:
     return FollowedSeries(
         tmdb_id=series.tmdb_id,
         name=series.name,
         poster_url=_poster_url(image_base, series.poster_path),
         status=series.status,
         added_at=added_at,
+        category=categorize(series.status, total, aired, watched),
+        aired_episodes=aired,
+        watched_episodes=watched,
     )
+
+
+def list_my_series(db: Session, user: User, image_base: str) -> list[FollowedSeries]:
+    """Series seguidas con su categoría y progreso, sin llamar a TMDB (solo caché)."""
+    counts = _episode_counts(db, user.id)
+    watched = _watched_aired_counts(db, user.id)
+    result = []
+    for series, added_at in list_followed(db, user):
+        total, aired = counts.get(series.tmdb_id, (0, 0))
+        result.append(
+            to_followed(series, added_at, image_base, total, aired, watched.get(series.tmdb_id, 0))
+        )
+    return result
+
+
+def followed_with_progress(
+    db: Session, user: User, series: Series, added_at: datetime, image_base: str
+) -> FollowedSeries:
+    """Un único `FollowedSeries` con su categoría, para la respuesta de seguir."""
+    total, aired = _episode_counts(db, user.id).get(series.tmdb_id, (0, 0))
+    watched = _watched_aired_counts(db, user.id).get(series.tmdb_id, 0)
+    return to_followed(series, added_at, image_base, total, aired, watched)
 
 
 # --- Episodios vistos y progreso (S2-4) -----------------------------------

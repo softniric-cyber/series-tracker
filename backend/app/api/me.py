@@ -19,11 +19,7 @@ _MAX_CALENDAR_DAYS = 366
 
 @router.get("/series", response_model=list[FollowedSeries])
 def list_my_series(current_user: CurrentUser, db: DbSession) -> list[FollowedSeries]:
-    image_base = get_settings().tmdb_image_base_url
-    return [
-        tracking.to_followed(series, added_at, image_base)
-        for series, added_at in tracking.list_followed(db, current_user)
-    ]
+    return tracking.list_my_series(db, current_user, get_settings().tmdb_image_base_url)
 
 
 @router.post(
@@ -45,7 +41,9 @@ async def follow_series(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Serie no encontrada"
         ) from exc
-    return tracking.to_followed(series, link.added_at, get_settings().tmdb_image_base_url)
+    return tracking.followed_with_progress(
+        db, current_user, series, link.added_at, get_settings().tmdb_image_base_url
+    )
 
 
 @router.delete("/series/{tmdb_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -22,22 +22,56 @@ function renderPage() {
   )
 }
 
+function makeSeries(overrides: Partial<FollowedSeries>): FollowedSeries {
+  return {
+    tmdb_id: 1,
+    name: 'Serie',
+    poster_url: null,
+    status: 'Returning Series',
+    added_at: '2026-07-10T00:00:00+00:00',
+    category: 'watching',
+    aired_episodes: 0,
+    watched_episodes: 0,
+    ...overrides,
+  }
+}
+
 describe('MySeriesPage', () => {
   it('lists followed series with a link to their detail', async () => {
     const followed: FollowedSeries[] = [
-      {
+      makeSeries({
         tmdb_id: 95396,
         name: 'Separación',
         poster_url: 'https://image.tmdb.org/t/p/w342/poster.jpg',
-        status: 'Returning Series',
-        added_at: '2026-07-10T00:00:00+00:00',
-      },
+        category: 'watching',
+        aired_episodes: 9,
+        watched_episodes: 3,
+      }),
     ]
     mockGetMySeries.mockResolvedValue(followed)
     renderPage()
 
     const link = await screen.findByRole('link', { name: /Separación/ })
     expect(link).toHaveAttribute('href', '/series/95396')
+    expect(screen.getByText('3/9 vistos')).toBeInTheDocument()
+  })
+
+  it('groups series into ordered sections by category', async () => {
+    mockGetMySeries.mockResolvedValue([
+      makeSeries({ tmdb_id: 1, name: 'Finalizada', category: 'finished' }),
+      makeSeries({ tmdb_id: 2, name: 'EnCurso', category: 'watching' }),
+      makeSeries({ tmdb_id: 3, name: 'AlDia', category: 'up_to_date' }),
+      makeSeries({ tmdb_id: 4, name: 'SinComenzar', category: 'not_started' }),
+    ])
+    renderPage()
+
+    const headings = await screen.findAllByRole('heading', { level: 2 })
+    expect(headings.map((h) => h.textContent)).toEqual([
+      'En curso (1)',
+      'Sin comenzar (1)',
+      'Al día (1)',
+      'Finalizadas (1)',
+    ])
   })
 
   it('shows an empty state when following nothing', async () => {

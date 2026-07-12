@@ -55,12 +55,17 @@ export interface SeriesDetail {
   is_following: boolean
 }
 
+export type FollowedCategory = 'watching' | 'not_started' | 'up_to_date' | 'finished'
+
 export interface FollowedSeries {
   tmdb_id: number
   name: string
   poster_url: string | null
   status: string | null
   added_at: string
+  category: FollowedCategory
+  aired_episodes: number
+  watched_episodes: number
 }
 
 export interface EpisodeSummary {
