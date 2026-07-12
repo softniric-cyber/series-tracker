@@ -1,8 +1,13 @@
 """Esquemas de series: búsqueda (S1-4) y ficha/temporadas cacheadas (S2-1)."""
 
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel
+
+# Categoría de una serie seguida en «Mis series», según el progreso de visionado
+# y si la serie tendrá nuevos episodios (ver `tracking.categorize`).
+FollowedCategory = Literal["watching", "not_started", "up_to_date", "finished"]
 
 
 class SeriesSearchResult(BaseModel):
@@ -102,13 +107,21 @@ class SeriesProgress(BaseModel):
 
 
 class FollowedSeries(BaseModel):
-    """Serie que el usuario sigue, para la página «Mis series» (S2-3)."""
+    """Serie que el usuario sigue, para la página «Mis series» (S2-3).
+
+    `category` clasifica la serie según el progreso de visionado (En curso, Sin
+    comenzar, Al día, Finalizada); `aired_episodes`/`watched_episodes` cuentan solo
+    episodios emitidos y no especiales, con la misma semántica que `SeriesProgress`.
+    """
 
     tmdb_id: int
     name: str
     poster_url: str | None
     status: str | None
     added_at: datetime
+    category: FollowedCategory
+    aired_episodes: int
+    watched_episodes: int
 
 
 class CalendarEntry(BaseModel):

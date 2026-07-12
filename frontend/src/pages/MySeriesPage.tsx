@@ -1,10 +1,19 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getMySeries } from '../api/me'
-import type { FollowedSeries } from '../api/types'
+import type { FollowedCategory, FollowedSeries } from '../api/types'
 import Spinner from '../components/Spinner'
 
+// Bloques en el orden pedido: En curso, Sin comenzar, Al día, Finalizadas.
+const SECTIONS: { category: FollowedCategory; title: string; hint: string }[] = [
+  { category: 'watching', title: 'En curso', hint: 'Tienes episodios emitidos por ver.' },
+  { category: 'not_started', title: 'Sin comenzar', hint: 'Aún no has empezado a verlas.' },
+  { category: 'up_to_date', title: 'Al día', hint: 'Al corriente; llegarán nuevos episodios.' },
+  { category: 'finished', title: 'Finalizadas', hint: 'Vistas al completo y sin más temporadas.' },
+]
+
 function FollowedCard({ series }: { series: FollowedSeries }) {
+  const showProgress = series.aired_episodes > 0
   return (
     <Link
       to={`/series/${series.tmdb_id}`}
@@ -28,7 +37,11 @@ function FollowedCard({ series }: { series: FollowedSeries }) {
         <h3 className="truncate text-sm font-semibold" title={series.name}>
           {series.name}
         </h3>
-        {series.status && <p className="mt-1 text-xs text-neutral-500">{series.status}</p>}
+        {showProgress && (
+          <p className="mt-1 text-xs text-neutral-500">
+            {series.watched_episodes}/{series.aired_episodes} vistos
+          </p>
+        )}
       </div>
     </Link>
   )
@@ -41,10 +54,10 @@ export default function MySeriesPage() {
   })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Mis series</h1>
-        <p className="mt-1 text-neutral-500">Las series que sigues.</p>
+        <p className="mt-1 text-neutral-500">Las series que sigues, organizadas por estado.</p>
       </div>
 
       {isPending && <Spinner label="Cargando tus series…" />}
@@ -59,13 +72,28 @@ export default function MySeriesPage() {
           </Link>
         </p>
       )}
-      {data && data.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {data.map((series) => (
-            <FollowedCard key={series.tmdb_id} series={series} />
-          ))}
-        </div>
-      )}
+      {data &&
+        data.length > 0 &&
+        SECTIONS.map(({ category, title, hint }) => {
+          const series = data.filter((s) => s.category === category)
+          if (series.length === 0) return null
+          return (
+            <section key={category} className="space-y-3">
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight">
+                  {title}{' '}
+                  <span className="text-sm font-normal text-neutral-400">({series.length})</span>
+                </h2>
+                <p className="text-xs text-neutral-500">{hint}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                {series.map((s) => (
+                  <FollowedCard key={s.tmdb_id} series={s} />
+                ))}
+              </div>
+            </section>
+          )
+        })}
     </div>
   )
 }
