@@ -18,6 +18,11 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class GoogleAuthRequest(BaseModel):
+    # ID token (JWT) emitido por Google Identity Services en el frontend.
+    credential: str
+
+
 class TokenPair(BaseModel):
     access_token: str
     refresh_token: str

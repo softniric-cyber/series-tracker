@@ -2,11 +2,12 @@
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 
-from app.api.deps import DbSession
+from app.api.deps import DbSession, GoogleTokenVerifier
 from app.core.config import get_settings
 from app.core.ratelimit import limiter
 from app.schemas.auth import (
     ForgotPasswordRequest,
+    GoogleAuthRequest,
     LoginRequest,
     MessageResponse,
     RefreshRequest,
@@ -16,6 +17,7 @@ from app.schemas.auth import (
 )
 from app.services import auth as auth_service
 from app.services.email import send_password_reset
+from app.services.google_auth import GoogleTokenError
 from app.services.security import (
     TokenError,
     create_access_token,
@@ -68,6 +70,30 @@ def login(request: Request, payload: LoginRequest, db: DbSession) -> TokenPair:
     return _token_pair_for(str(user.id))
 
 
+@router.post("/google", response_model=TokenPair)
+@limiter.limit(_settings.rate_limit_login)
+def google_login(
+    request: Request,
+    payload: GoogleAuthRequest,
+    db: DbSession,
+    verify: GoogleTokenVerifier,
+) -> TokenPair:
+    try:
+        identity = verify(payload.credential)
+    except GoogleTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No se pudo verificar la cuenta de Google",
+        ) from None
+    user = auth_service.get_or_create_google_user(
+        db,
+        google_sub=identity.sub,
+        email=identity.email,
+        display_name=identity.name,
+    )
+    return _token_pair_for(str(user.id))
+
+
 @router.post("/refresh", response_model=TokenPair)
 @limiter.limit(_settings.rate_limit_refresh)
 def refresh(request: Request, payload: RefreshRequest, db: DbSession) -> TokenPair:
@@ -96,8 +122,9 @@ def forgot_password(
     background_tasks: BackgroundTasks,
 ) -> MessageResponse:
     # Respuesta neutra siempre (anti-enumeración): no revela si el email existe.
+    # Los usuarios solo-Google no tienen contraseña que restablecer.
     user = auth_service.get_user_by_email(db, payload.email)
-    if user is not None:
+    if user is not None and user.password_hash is not None:
         token = create_reset_token(str(user.id), user.password_hash)
         link = f"{get_settings().frontend_url}/reset-password?token={token}"
         background_tasks.add_task(send_password_reset, user.email, link)
@@ -121,7 +148,11 @@ def reset_password(
         raise invalid from None
     user = auth_service.get_user_by_id(db, subject)
     # La huella evita reutilizar el enlace tras un cambio de contraseña.
-    if user is None or password_fingerprint(user.password_hash) != fingerprint:
+    if (
+        user is None
+        or user.password_hash is None
+        or password_fingerprint(user.password_hash) != fingerprint
+    ):
         raise invalid
     auth_service.set_password(db, user, payload.new_password)
     return MessageResponse(message="Contraseña actualizada. Ya puedes iniciar sesión.")
