@@ -39,8 +39,46 @@ def register_user(db: Session, *, email: str, password: str, display_name: str |
 def authenticate_user(db: Session, *, email: str, password: str) -> User:
     normalized = _normalize_email(email)
     user = db.scalar(select(User).where(User.email == normalized))
-    if user is None or not verify_password(password, user.password_hash):
+    # Los usuarios solo-Google no tienen contraseña (password_hash None).
+    if (
+        user is None
+        or user.password_hash is None
+        or not verify_password(password, user.password_hash)
+    ):
         raise InvalidCredentialsError(normalized)
+    return user
+
+
+def get_or_create_google_user(
+    db: Session, *, google_sub: str, email: str, display_name: str | None
+) -> User:
+    """Busca el usuario por `google_sub`, si no por email (vincula), y si no lo crea.
+
+    Los emails de Google vienen verificados, así que vincular por email es seguro:
+    quien ya tenía cuenta con contraseña puede entrar además con Google.
+    """
+    user = db.scalar(select(User).where(User.google_sub == google_sub))
+    if user is not None:
+        return user
+
+    normalized = _normalize_email(email)
+    user = db.scalar(select(User).where(User.email == normalized))
+    if user is not None:
+        if user.google_sub is None:
+            user.google_sub = google_sub
+            db.commit()
+            db.refresh(user)
+        return user
+
+    user = User(
+        email=normalized,
+        password_hash=None,
+        google_sub=google_sub,
+        display_name=display_name,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     return user
 
 

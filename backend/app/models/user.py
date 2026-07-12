@@ -14,7 +14,10 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     # El email se normaliza a minúsculas en la capa de auth (unicidad case-insensitive).
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    # Null para usuarios que solo se autentican con Google (no tienen contraseña).
+    password_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    # `sub` estable de Google (OpenID) si el usuario ha vinculado su cuenta de Google.
+    google_sub: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
     display_name: Mapped[str | None] = mapped_column(String, nullable=True)
     country: Mapped[str] = mapped_column(String(2), nullable=False, default="ES")
     language: Mapped[str] = mapped_column(String, nullable=False, default="es-ES")

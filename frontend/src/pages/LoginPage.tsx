@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import AuthShell from '../components/AuthShell'
+import GoogleAuthButton from '../components/GoogleAuthButton'
 import { inputClass, labelClass, primaryButtonClass } from '../components/ui'
 import { useAuth } from '../auth/AuthContext'
 
@@ -94,6 +95,9 @@ export default function LoginPage() {
           </Link>
         </p>
       </form>
+      <div className="mt-5">
+        <GoogleAuthButton redirectTo={from} />
+      </div>
     </AuthShell>
   )
 }

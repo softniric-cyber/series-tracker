@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     email_from: str = "trackmyseries <onboarding@resend.dev>"
 
+    # OAuth con Google (Sign in with Google / Google Identity Services). El client
+    # ID es público; se verifica que el ID token tenga esta audiencia. Vacío = off.
+    google_client_id: str = ""
+
     @field_validator("database_url")
     @classmethod
     def _force_psycopg_driver(cls, v: str) -> str:

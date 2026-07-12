@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import AuthShell from '../components/AuthShell'
+import GoogleAuthButton from '../components/GoogleAuthButton'
 import { inputClass, labelClass, primaryButtonClass } from '../components/ui'
 import { useAuth } from '../auth/AuthContext'
 
@@ -102,6 +103,9 @@ export default function RegisterPage() {
           {submitting ? 'Creando…' : 'Crear cuenta'}
         </button>
       </form>
+      <div className="mt-5">
+        <GoogleAuthButton redirectTo="/" />
+      </div>
     </AuthShell>
   )
 }

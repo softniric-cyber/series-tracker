@@ -21,6 +21,14 @@ export function register(
   })
 }
 
+export function googleLogin(credential: string): Promise<TokenPair> {
+  return apiFetch<TokenPair>('/auth/google', {
+    method: 'POST',
+    body: { credential },
+    auth: false,
+  })
+}
+
 export function getMe(): Promise<UserPublic> {
   return apiFetch<UserPublic>('/users/me')
 }

@@ -1,6 +1,11 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { getMe, login as apiLogin, register as apiRegister } from '../api/auth'
+import {
+  getMe,
+  googleLogin as apiGoogleLogin,
+  login as apiLogin,
+  register as apiRegister,
+} from '../api/auth'
 import type { UserPublic } from '../api/types'
 import { clearTokens, getAccessToken, setTokens } from './tokenStore'
 
@@ -11,6 +16,7 @@ interface AuthContextValue {
   status: Status
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, displayName?: string) => Promise<void>
+  loginWithGoogle: (credential: string) => Promise<void>
   logout: () => void
   setUser: (user: UserPublic) => void
 }
@@ -52,6 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('authenticated')
   }
 
+  async function loginWithGoogle(credential: string) {
+    setTokens(await apiGoogleLogin(credential))
+    setUser(await getMe())
+    setStatus('authenticated')
+  }
+
   function logout() {
     clearTokens()
     setUser(null)
@@ -59,7 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, status, login, register, logout, setUser }}>
+    <AuthContext.Provider
+      value={{ user, status, login, register, loginWithGoogle, logout, setUser }}
+    >
       {children}
     </AuthContext.Provider>
   )
