@@ -12,7 +12,16 @@ import { API_URL } from './lib/config'
 void fetch(`${API_URL}/health`).catch(() => {})
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      // Los datos se consideran frescos 5 min: volver a una vista ya cargada no
+      // refetchea (navegación instantánea). Las mutaciones (seguir, marcar visto)
+      // invalidan sus queries explícitamente, así que esto no sirve datos obsoletos.
+      staleTime: 1000 * 60 * 5,
+    },
+  },
 })
 
 createRoot(document.getElementById('root')!).render(
