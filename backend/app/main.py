@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -38,6 +39,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Comprime respuestas JSON (búsqueda, listas) cuando el cliente acepta gzip.
+# Solo actúa a partir de `minimum_size` bytes para no penalizar respuestas pequeñas.
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 app.include_router(auth.router)
 app.include_router(users.router)
