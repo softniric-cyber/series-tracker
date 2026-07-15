@@ -6,6 +6,8 @@ para series finalizadas. La freshness de cada temporada se guarda por separado e
 `series.metadata["_seasons_cached_at"]` para no reconsultar episodios ya cacheados.
 """
 
+import asyncio
+from collections.abc import Iterable
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
@@ -189,6 +191,43 @@ async def get_season(
     db.commit()
     db.refresh(series)
     return series, _load_season_episodes(db, tmdb_id, season_number)
+
+
+async def ensure_seasons_cached(
+    db: Session,
+    client: TMDBClient,
+    tmdb_id: int,
+    season_numbers: Iterable[int],
+    *,
+    language: str,
+    now: datetime | None = None,
+    force: bool = False,
+) -> Series:
+    """Cachea varias temporadas de una serie a la vez.
+
+    Solo el fetch a TMDB de las temporadas obsoletas se hace en **paralelo**
+    (`asyncio.gather`); las escrituras a la Session síncrona se aplican después,
+    de forma secuencial, así que no hay accesos concurrentes a la BD ni carreras
+    sobre `series.metadata_`. Reemplaza al bucle secuencial de `get_season` cuando
+    hace falta caché de la serie entera (progreso, job de refresco).
+
+    `force` afecta **solo a las temporadas** (ignora su freshness); la serie sigue
+    su TTL normal — el caller que quiera refrescarla la fuerza antes por su cuenta.
+    """
+    now = now or datetime.now(UTC)
+    series = await get_series(db, client, tmdb_id, language=language, now=now)
+    stale = [n for n in season_numbers if force or not _season_is_fresh(series, n, now)]
+    if not stale:
+        return series
+    payloads = await asyncio.gather(
+        *(client.get_tv_season(tmdb_id, n, language=language) for n in stale)
+    )
+    for season_number, payload in zip(stale, payloads, strict=True):
+        _upsert_episodes(db, tmdb_id, season_number, payload.get("episodes") or [])
+        _mark_season_cached(series, season_number, now)
+    db.commit()
+    db.refresh(series)
+    return series
 
 
 def to_series_detail(series: Series, image_base: str) -> SeriesDetail:
