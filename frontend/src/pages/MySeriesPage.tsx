@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getMySeries } from '../api/me'
 import type { FollowedCategory, FollowedSeries } from '../api/types'
-import Spinner from '../components/Spinner'
+import Skeleton from '../components/Skeleton'
 
 // Bloques en el orden pedido: En curso, Sin comenzar, Al día, Finalizadas.
 const SECTIONS: { category: FollowedCategory; title: string; hint: string }[] = [
@@ -60,7 +60,23 @@ export default function MySeriesPage() {
         <p className="mt-1 text-neutral-500">Las series que sigues, organizadas por estado.</p>
       </div>
 
-      {isPending && <Spinner label="Cargando tus series…" />}
+      {isPending && (
+        <section className="space-y-3" role="status">
+          <span className="sr-only">Cargando tus series…</span>
+          <Skeleton className="h-6 w-28" />
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800">
+                <Skeleton className="aspect-[2/3] w-full rounded-none" />
+                <div className="space-y-2 p-3">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       {isError && (
         <p className="text-sm text-red-600">No se pudieron cargar tus series. Inténtalo de nuevo.</p>
       )}
