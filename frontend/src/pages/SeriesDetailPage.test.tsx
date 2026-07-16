@@ -260,6 +260,16 @@ describe('SeriesDetailPage', () => {
     resolveFollow()
   })
 
+  it('shows a skeleton loading state while the detail is pending', async () => {
+    // La ficha no resuelve: debe verse el placeholder anunciado a lectores de pantalla.
+    mockDetail.mockReturnValue(new Promise(() => {}))
+    mockProviders.mockResolvedValue(providers)
+    renderPage()
+
+    expect(await screen.findByText('Cargando ficha…')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Separación' })).not.toBeInTheDocument()
+  })
+
   it('shows a not-found message on 404', async () => {
     const { ApiError } = await import('../api/client')
     mockDetail.mockRejectedValue(new ApiError(404, 'Serie no encontrada'))

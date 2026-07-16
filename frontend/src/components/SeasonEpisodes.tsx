@@ -7,6 +7,7 @@ import {
   unmarkSeasonWatched,
 } from '../api/me'
 import type { EpisodeSummary, SeasonDetail, SeriesProgress } from '../api/types'
+import Skeleton from './Skeleton'
 
 type QueryClient = ReturnType<typeof useQueryClient>
 
@@ -197,7 +198,18 @@ export default function SeasonEpisodes({
   })
 
   if (isPending) {
-    return <p className="px-4 py-3 text-sm text-neutral-500">Cargando episodios…</p>
+    return (
+      <ul className="divide-y divide-neutral-200 dark:divide-neutral-800" role="status">
+        <li className="sr-only">Cargando episodios…</li>
+        {[0, 1, 2, 3].map((i) => (
+          <li key={i} className="flex items-center gap-3 px-4 py-2.5">
+            <Skeleton className="h-4 w-4 shrink-0 rounded" />
+            <Skeleton className="h-4 flex-1" />
+            <Skeleton className="h-3 w-16 shrink-0" />
+          </li>
+        ))}
+      </ul>
+    )
   }
   if (isError) {
     return <p className="px-4 py-3 text-sm text-red-600">No se pudieron cargar los episodios.</p>

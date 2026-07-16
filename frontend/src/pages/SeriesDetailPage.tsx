@@ -6,7 +6,7 @@ import { followSeries, getProgress, unfollowSeries } from '../api/me'
 import { ApiError } from '../api/client'
 import type { SeasonProgress, SeasonSummary, SeriesDetail, SeriesProgress } from '../api/types'
 import SeasonEpisodes from '../components/SeasonEpisodes'
-import Spinner from '../components/Spinner'
+import Skeleton from '../components/Skeleton'
 import { cardClass } from '../components/ui'
 
 function yearRange(detail: SeriesDetail): string | null {
@@ -106,7 +106,14 @@ function WhereToWatch({ tmdbId }: { tmdbId: number }) {
   return (
     <section className={cardClass}>
       <h2 className="text-lg font-semibold">Dónde verla</h2>
-      {isPending && <p className="mt-2 text-sm text-neutral-500">Cargando proveedores…</p>}
+      {isPending && (
+        <div className="mt-3 flex gap-4" role="status">
+          <span className="sr-only">Cargando proveedores…</span>
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-12 w-12 rounded-xl" />
+          ))}
+        </div>
+      )}
       {isError && (
         <p className="mt-2 text-sm text-red-600">No se pudieron cargar los proveedores.</p>
       )}
@@ -208,6 +215,41 @@ function SeasonRow({
   )
 }
 
+// Placeholder de la ficha mientras carga: replica el layout real (póster, título,
+// géneros, botón y unas filas de temporada) para evitar el salto al llegar los datos.
+function SeriesDetailSkeleton() {
+  return (
+    <div className="space-y-6" role="status">
+      <span className="sr-only">Cargando ficha…</span>
+      <header className="flex flex-col gap-5 sm:flex-row">
+        <div className="w-40 shrink-0 self-center sm:self-start">
+          <Skeleton className="aspect-[2/3] w-full rounded-xl" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-3">
+          <Skeleton className="h-8 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+          <div className="flex gap-2">
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-9 w-32 rounded-lg" />
+        </div>
+      </header>
+      <div className={cardClass}>
+        <Skeleton className="h-5 w-32" />
+      </div>
+      <section className="space-y-2">
+        <Skeleton className="h-6 w-28" />
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-xl" />
+        ))}
+      </section>
+    </div>
+  )
+}
+
 export default function SeriesDetailPage() {
   const { tmdbId } = useParams<{ tmdbId: string }>()
   const id = Number(tmdbId)
@@ -226,7 +268,7 @@ export default function SeriesDetailPage() {
     enabled: Number.isFinite(id) && data?.is_following === true,
   })
 
-  if (isPending) return <Spinner label="Cargando ficha…" />
+  if (isPending) return <SeriesDetailSkeleton />
 
   if (isError) {
     const notFound = error instanceof ApiError && error.status === 404
