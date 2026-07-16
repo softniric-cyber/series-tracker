@@ -194,6 +194,43 @@ describe('SeriesDetailPage', () => {
     expect(mockMarkEpisode).toHaveBeenCalledWith(1)
   })
 
+  it('checks the episode optimistically before the request resolves', async () => {
+    mockDetail.mockResolvedValue({ ...detail, is_following: true })
+    mockProviders.mockResolvedValue(providers)
+    mockProgress.mockResolvedValue({
+      tmdb_id: 95396,
+      total_episodes: 9,
+      watched_episodes: 0,
+      next_episode: null,
+      seasons: [],
+    })
+    // Primera carga sin vistos; la reconciliación posterior ya lo trae marcado.
+    const watchedSeason1: SeasonDetail = {
+      ...season1,
+      episodes: season1.episodes.map((ep) => (ep.tmdb_id === 1 ? { ...ep, watched: true } : ep)),
+    }
+    mockSeason.mockResolvedValueOnce(season1)
+    mockSeason.mockResolvedValue(watchedSeason1)
+    // La mutación queda "colgada": el check NO debe esperar a que resuelva.
+    let resolveMark: () => void = () => {}
+    mockMarkEpisode.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveMark = resolve
+      }),
+    )
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: /Temporada 1/ }))
+    const checkbox = await screen.findByRole('checkbox', { name: /Buenas noticias/ })
+    expect(checkbox).not.toBeChecked()
+
+    await userEvent.click(checkbox)
+    // Optimista: marcado al instante, sin esperar la respuesta del backend.
+    expect(checkbox).toBeChecked()
+
+    resolveMark()
+  })
+
   it('shows a not-found message on 404', async () => {
     const { ApiError } = await import('../api/client')
     mockDetail.mockRejectedValue(new ApiError(404, 'Serie no encontrada'))

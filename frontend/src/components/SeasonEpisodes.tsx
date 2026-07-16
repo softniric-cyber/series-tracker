@@ -6,7 +6,25 @@ import {
   unmarkEpisodeWatched,
   unmarkSeasonWatched,
 } from '../api/me'
-import type { EpisodeSummary } from '../api/types'
+import type { EpisodeSummary, SeasonDetail } from '../api/types'
+
+// Reescribe la caché de la temporada aplicando `watched` a los episodios elegidos.
+// Base de la actualización optimista: el check se refleja al instante, sin esperar
+// al round-trip del backend ni al refetch posterior.
+function patchSeasonCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  seasonKey: readonly unknown[],
+  watched: boolean,
+  shouldPatch: (ep: EpisodeSummary) => boolean,
+): SeasonDetail | undefined {
+  const previous = queryClient.getQueryData<SeasonDetail>(seasonKey)
+  queryClient.setQueryData<SeasonDetail>(seasonKey, (old) =>
+    old
+      ? { ...old, episodes: old.episodes.map((ep) => (shouldPatch(ep) ? { ...ep, watched } : ep)) }
+      : old,
+  )
+  return previous
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return 'Sin fecha'
@@ -25,12 +43,26 @@ function EpisodeRow({
   following: boolean
 }) {
   const queryClient = useQueryClient()
+  const seasonKey = ['season', seriesId, episode.season_number] as const
   const mutation = useMutation({
     mutationFn: () =>
       episode.watched ? unmarkEpisodeWatched(episode.tmdb_id) : markEpisodeWatched(episode.tmdb_id),
-    onSuccess: async () => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: seasonKey })
+      const previous = patchSeasonCache(
+        queryClient,
+        seasonKey,
+        !episode.watched,
+        (ep) => ep.tmdb_id === episode.tmdb_id,
+      )
+      return { previous }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(seasonKey, context.previous)
+    },
+    onSettled: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['season', seriesId, episode.season_number] }),
+        queryClient.invalidateQueries({ queryKey: seasonKey }),
         queryClient.invalidateQueries({ queryKey: ['progress', seriesId] }),
       ])
     },
@@ -79,14 +111,24 @@ export default function SeasonEpisodes({
     queryFn: () => getSeason(seriesId, seasonNumber),
   })
 
+  const seasonKey = ['season', seriesId, seasonNumber] as const
   const seasonMutation = useMutation({
     mutationFn: (allWatched: boolean) =>
       allWatched
         ? unmarkSeasonWatched(seriesId, seasonNumber)
         : markSeasonWatched(seriesId, seasonNumber),
-    onSuccess: async () => {
+    onMutate: async (allWatched: boolean) => {
+      await queryClient.cancelQueries({ queryKey: seasonKey })
+      // El backend marca/desmarca TODOS los episodios de la temporada.
+      const previous = patchSeasonCache(queryClient, seasonKey, !allWatched, () => true)
+      return { previous }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(seasonKey, context.previous)
+    },
+    onSettled: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['season', seriesId, seasonNumber] }),
+        queryClient.invalidateQueries({ queryKey: seasonKey }),
         queryClient.invalidateQueries({ queryKey: ['progress', seriesId] }),
       ])
     },
