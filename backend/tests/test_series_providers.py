@@ -95,6 +95,7 @@ def test_providers_filtered_by_profile_country(client: TestClient, with_tmdb: No
     )
     resp = client.get("/series/95396/providers", headers=headers)
     assert resp.status_code == 200
+    assert resp.headers["cache-control"] == "private, max-age=600"
     body = resp.json()
     assert body["country"] == "ES"
     assert body["link"].endswith("locale=ES")

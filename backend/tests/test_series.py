@@ -74,6 +74,7 @@ def test_search_returns_normalized_results(client: TestClient, with_tmdb: None) 
     )
     resp = client.get(SEARCH, params={"q": "Severance"}, headers=headers)
     assert resp.status_code == 200
+    assert resp.headers["cache-control"] == "private, max-age=300"
     body = resp.json()
     assert body["total_results"] == 1
     result = body["results"][0]
