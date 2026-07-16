@@ -6,13 +6,25 @@ import {
   unmarkEpisodeWatched,
   unmarkSeasonWatched,
 } from '../api/me'
-import type { EpisodeSummary, SeasonDetail } from '../api/types'
+import type { EpisodeSummary, SeasonDetail, SeriesProgress } from '../api/types'
+
+type QueryClient = ReturnType<typeof useQueryClient>
+
+const clamp = (n: number, min: number, max: number): number => Math.min(Math.max(n, min), max)
+
+// Un episodio cuenta para el progreso si es de una temporada normal y ya se emitió
+// (misma semántica que el backend: season>=1 y air_date<=hoy).
+function countsForProgress(ep: EpisodeSummary): boolean {
+  return (
+    ep.season_number >= 1 && ep.air_date != null && ep.air_date <= new Date().toISOString().slice(0, 10)
+  )
+}
 
 // Reescribe la caché de la temporada aplicando `watched` a los episodios elegidos.
 // Base de la actualización optimista: el check se refleja al instante, sin esperar
 // al round-trip del backend ni al refetch posterior.
 function patchSeasonCache(
-  queryClient: ReturnType<typeof useQueryClient>,
+  queryClient: QueryClient,
   seasonKey: readonly unknown[],
   watched: boolean,
   shouldPatch: (ep: EpisodeSummary) => boolean,
@@ -23,6 +35,33 @@ function patchSeasonCache(
       ? { ...old, episodes: old.episodes.map((ep) => (shouldPatch(ep) ? { ...ep, watched } : ep)) }
       : old,
   )
+  return previous
+}
+
+// Ajuste optimista de la barra/porcentaje de progreso: mueve el total visto y el
+// conteo de la temporada afectada. `next_episode` y los distintivos finos se
+// reconcilian con el refetch de onSettled (recalcularlos aquí replicaría toda la
+// lógica del backend a través de todas las temporadas).
+function patchProgressCache(
+  queryClient: QueryClient,
+  progressKey: readonly unknown[],
+  seasonNumber: number,
+  deltaWatched: number,
+): SeriesProgress | undefined {
+  const previous = queryClient.getQueryData<SeriesProgress>(progressKey)
+  if (deltaWatched === 0) return previous
+  queryClient.setQueryData<SeriesProgress>(progressKey, (old) => {
+    if (!old) return old
+    return {
+      ...old,
+      watched_episodes: clamp(old.watched_episodes + deltaWatched, 0, old.total_episodes),
+      seasons: (old.seasons ?? []).map((s) => {
+        if (s.season_number !== seasonNumber) return s
+        const watched = clamp(s.watched + deltaWatched, 0, s.aired)
+        return { ...s, watched, completed: s.aired > 0 && watched >= s.aired }
+      }),
+    }
+  })
   return previous
 }
 
@@ -44,26 +83,36 @@ function EpisodeRow({
 }) {
   const queryClient = useQueryClient()
   const seasonKey = ['season', seriesId, episode.season_number] as const
+  const progressKey = ['progress', seriesId] as const
   const mutation = useMutation({
     mutationFn: () =>
       episode.watched ? unmarkEpisodeWatched(episode.tmdb_id) : markEpisodeWatched(episode.tmdb_id),
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: seasonKey })
-      const previous = patchSeasonCache(
+      await queryClient.cancelQueries({ queryKey: progressKey })
+      const previousSeason = patchSeasonCache(
         queryClient,
         seasonKey,
         !episode.watched,
         (ep) => ep.tmdb_id === episode.tmdb_id,
       )
-      return { previous }
+      const delta = countsForProgress(episode) ? (episode.watched ? -1 : 1) : 0
+      const previousProgress = patchProgressCache(
+        queryClient,
+        progressKey,
+        episode.season_number,
+        delta,
+      )
+      return { previousSeason, previousProgress }
     },
     onError: (_err, _vars, context) => {
-      if (context?.previous) queryClient.setQueryData(seasonKey, context.previous)
+      if (context?.previousSeason) queryClient.setQueryData(seasonKey, context.previousSeason)
+      if (context?.previousProgress) queryClient.setQueryData(progressKey, context.previousProgress)
     },
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: seasonKey }),
-        queryClient.invalidateQueries({ queryKey: ['progress', seriesId] }),
+        queryClient.invalidateQueries({ queryKey: progressKey }),
       ])
     },
   })
@@ -112,6 +161,7 @@ export default function SeasonEpisodes({
   })
 
   const seasonKey = ['season', seriesId, seasonNumber] as const
+  const progressKey = ['progress', seriesId] as const
   const seasonMutation = useMutation({
     mutationFn: (allWatched: boolean) =>
       allWatched
@@ -119,17 +169,29 @@ export default function SeasonEpisodes({
         : markSeasonWatched(seriesId, seasonNumber),
     onMutate: async (allWatched: boolean) => {
       await queryClient.cancelQueries({ queryKey: seasonKey })
+      await queryClient.cancelQueries({ queryKey: progressKey })
       // El backend marca/desmarca TODOS los episodios de la temporada.
-      const previous = patchSeasonCache(queryClient, seasonKey, !allWatched, () => true)
-      return { previous }
+      const previousSeason = patchSeasonCache(queryClient, seasonKey, !allWatched, () => true)
+      // Delta = cuántos episodios que CUENTAN (emitidos, no especiales) cambian de estado.
+      const airedNonSpecial = (data?.episodes ?? []).filter(countsForProgress)
+      const currentlyWatched = airedNonSpecial.filter((ep) => ep.watched).length
+      const target = allWatched ? 0 : airedNonSpecial.length
+      const previousProgress = patchProgressCache(
+        queryClient,
+        progressKey,
+        seasonNumber,
+        target - currentlyWatched,
+      )
+      return { previousSeason, previousProgress }
     },
     onError: (_err, _vars, context) => {
-      if (context?.previous) queryClient.setQueryData(seasonKey, context.previous)
+      if (context?.previousSeason) queryClient.setQueryData(seasonKey, context.previousSeason)
+      if (context?.previousProgress) queryClient.setQueryData(progressKey, context.previousProgress)
     },
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: seasonKey }),
-        queryClient.invalidateQueries({ queryKey: ['progress', seriesId] }),
+        queryClient.invalidateQueries({ queryKey: progressKey }),
       ])
     },
   })
