@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Path, Query, status
+from fastapi import APIRouter, HTTPException, Path, Query, Response, status
 
 from app.api.deps import CurrentUser, DbSession, TmdbClient
 from app.core.config import get_settings
@@ -29,9 +29,14 @@ router = APIRouter(prefix="/series", tags=["series"])
 async def search(
     current_user: CurrentUser,
     client: TmdbClient,
+    response: Response,
     q: Annotated[str, Query(min_length=1, max_length=100, description="Texto a buscar")],
     page: Annotated[int, Query(ge=1, le=500)] = 1,
 ) -> SeriesSearchResponse:
+    # `private`: la respuesta depende del idioma del usuario, no debe cachearla un
+    # proxy compartido (Cloudflare). Solo el navegador, y sin campos mutables por
+    # usuario (no lleva follow/watched), así que no hay riesgo de estado rancio.
+    response.headers["Cache-Control"] = "private, max-age=300"
     return await search_series(
         client,
         query=q,
@@ -83,6 +88,7 @@ async def season_detail(
 async def series_providers(
     current_user: CurrentUser,
     client: TmdbClient,
+    response: Response,
     tmdb_id: Annotated[int, Path(ge=1)],
 ) -> SeriesProviders:
     try:
@@ -91,6 +97,9 @@ async def series_providers(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Serie no encontrada"
         ) from exc
+    # `private` (depende del país del usuario) y sin campos mutables por usuario.
+    # Los proveedores cambian despacio; 10 min de caché en el navegador es seguro.
+    response.headers["Cache-Control"] = "private, max-age=600"
     return build_series_providers(
         payload,
         country=current_user.country,
