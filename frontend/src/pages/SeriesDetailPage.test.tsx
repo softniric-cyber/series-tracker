@@ -194,6 +194,72 @@ describe('SeriesDetailPage', () => {
     expect(mockMarkEpisode).toHaveBeenCalledWith(1)
   })
 
+  it('checks the episode and bumps progress optimistically before the request resolves', async () => {
+    mockDetail.mockResolvedValue({ ...detail, is_following: true })
+    mockProviders.mockResolvedValue(providers)
+    mockProgress.mockResolvedValue({
+      tmdb_id: 95396,
+      total_episodes: 9,
+      watched_episodes: 3,
+      next_episode: null,
+      seasons: [{ season_number: 1, episodes: 9, aired: 9, watched: 3, completed: false }],
+    })
+    // Primera carga sin vistos; la reconciliación posterior ya lo trae marcado.
+    const watchedSeason1: SeasonDetail = {
+      ...season1,
+      episodes: season1.episodes.map((ep) => (ep.tmdb_id === 1 ? { ...ep, watched: true } : ep)),
+    }
+    mockSeason.mockResolvedValueOnce(season1)
+    mockSeason.mockResolvedValue(watchedSeason1)
+    // La mutación queda "colgada": la UI NO debe esperar a que resuelva.
+    let resolveMark: () => void = () => {}
+    mockMarkEpisode.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveMark = resolve
+      }),
+    )
+    renderPage()
+
+    expect(await screen.findByText(/3 \/ 9/)).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: /Temporada 1/ }))
+    const checkbox = await screen.findByRole('checkbox', { name: /Buenas noticias/ })
+    expect(checkbox).not.toBeChecked()
+
+    await userEvent.click(checkbox)
+    // Optimista: check y barra de progreso al instante, sin respuesta del backend.
+    expect(checkbox).toBeChecked()
+    expect(screen.getByText(/4 \/ 9/)).toBeInTheDocument()
+
+    resolveMark()
+  })
+
+  it('flips the follow button optimistically before the request resolves', async () => {
+    mockDetail.mockResolvedValue({ ...detail, is_following: false })
+    mockProviders.mockResolvedValue(providers)
+    mockProgress.mockResolvedValue({
+      tmdb_id: 95396,
+      total_episodes: 9,
+      watched_episodes: 0,
+      next_episode: null,
+      seasons: [],
+    })
+    // followSeries queda "colgada": el botón NO debe esperar a que resuelva.
+    let resolveFollow: () => void = () => {}
+    mockFollow.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveFollow = resolve
+      }),
+    )
+    renderPage()
+
+    const followButton = await screen.findByRole('button', { name: /Seguir/ })
+    await userEvent.click(followButton)
+    // Optimista: pasa a "Siguiendo" sin esperar la respuesta del backend.
+    expect(await screen.findByRole('button', { name: /Siguiendo/ })).toBeInTheDocument()
+
+    resolveFollow()
+  })
+
   it('shows a not-found message on 404', async () => {
     const { ApiError } = await import('../api/client')
     mockDetail.mockRejectedValue(new ApiError(404, 'Serie no encontrada'))

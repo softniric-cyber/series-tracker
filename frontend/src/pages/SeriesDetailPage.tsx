@@ -19,14 +19,28 @@ function yearRange(detail: SeriesDetail): string | null {
 
 function FollowButton({ tmdbId, isFollowing }: { tmdbId: number; isFollowing: boolean }) {
   const queryClient = useQueryClient()
+  const seriesKey = ['series', tmdbId] as const
   const mutation = useMutation({
     mutationFn: async () => {
       if (isFollowing) await unfollowSeries(tmdbId)
       else await followSeries(tmdbId)
     },
-    onSuccess: async () => {
+    // Optimista: el botón cambia al instante (y habilita la query de progreso al
+    // seguir); si el PUT/DELETE falla, se revierte con el snapshot previo.
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: seriesKey })
+      const previous = queryClient.getQueryData<SeriesDetail>(seriesKey)
+      queryClient.setQueryData<SeriesDetail>(seriesKey, (old) =>
+        old ? { ...old, is_following: !isFollowing } : old,
+      )
+      return { previous }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(seriesKey, context.previous)
+    },
+    onSettled: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['series', tmdbId] }),
+        queryClient.invalidateQueries({ queryKey: seriesKey }),
         queryClient.invalidateQueries({ queryKey: ['mySeries'] }),
       ])
     },
