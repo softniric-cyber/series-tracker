@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.db import SessionLocal
 from app.models.series import Series
 from app.models.user_series import UserSeries
-from app.services.series_cache import FINISHED_STATUSES, get_season, get_series
+from app.services.series_cache import FINISHED_STATUSES, ensure_seasons_cached, get_series
 from app.services.tmdb_client import TMDBClient, TMDBError
 
 # Idioma con el que se cachea en el job (la caché es compartida, un solo idioma).
@@ -43,12 +43,12 @@ async def refresh_followed_series(
                 db, client, tmdb_id, language=_REFRESH_LANGUAGE, now=now, force=True
             )
             number_of_seasons = int((fresh.metadata_ or {}).get("number_of_seasons") or 0)
-            for season_number in range(1, number_of_seasons + 1):
-                await get_season(
+            if number_of_seasons:
+                await ensure_seasons_cached(
                     db,
                     client,
                     tmdb_id,
-                    season_number,
+                    range(1, number_of_seasons + 1),
                     language=_REFRESH_LANGUAGE,
                     now=now,
                     force=True,

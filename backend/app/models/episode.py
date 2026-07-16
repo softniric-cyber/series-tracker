@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Integer, Text, UniqueConstraint
+from sqlalchemy import Date, ForeignKey, Index, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -10,7 +10,12 @@ class Episode(Base):
     """Caché local de TMDB. Aplana la temporada en season_number."""
 
     __tablename__ = "episodes"
-    __table_args__ = (UniqueConstraint("series_tmdb_id", "season_number", "episode_number"),)
+    __table_args__ = (
+        UniqueConstraint("series_tmdb_id", "season_number", "episode_number"),
+        # Calendario (rango de air_date por series seguidas) y progreso filtran por
+        # (series_tmdb_id, air_date); el índice compuesto cubre el rango de fechas.
+        Index("ix_episodes_series_air_date", "series_tmdb_id", "air_date"),
+    )
 
     tmdb_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     series_tmdb_id: Mapped[int] = mapped_column(

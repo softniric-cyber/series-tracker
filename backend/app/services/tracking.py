@@ -24,7 +24,12 @@ from app.schemas.series import (
     SeasonProgress,
     SeriesProgress,
 )
-from app.services.series_cache import FINISHED_STATUSES, get_season, get_series
+from app.services.series_cache import (
+    FINISHED_STATUSES,
+    ensure_seasons_cached,
+    get_season,
+    get_series,
+)
 from app.services.tmdb_client import TMDBClient
 
 _POSTER_SIZE = "w342"
@@ -275,9 +280,11 @@ async def get_progress(
 ) -> SeriesProgress:
     """Progreso sobre episodios emitidos y no especiales; cachea todas las temporadas."""
     series = await get_series(db, client, tmdb_id, language=language)
-    number_of_seasons = (series.metadata_ or {}).get("number_of_seasons") or 0
-    for season_number in range(1, int(number_of_seasons) + 1):
-        await get_season(db, client, tmdb_id, season_number, language=language)
+    number_of_seasons = int((series.metadata_ or {}).get("number_of_seasons") or 0)
+    if number_of_seasons:
+        await ensure_seasons_cached(
+            db, client, tmdb_id, range(1, number_of_seasons + 1), language=language
+        )
 
     stmt = (
         select(Episode)
