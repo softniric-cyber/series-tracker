@@ -17,6 +17,28 @@ function yearRange(detail: SeriesDetail): string | null {
   return `${from}–${to}`
 }
 
+// Nota global de TMDB. Se oculta si no hay votos (o si la serie se cacheó antes
+// de que guardáramos el dato): una nota de 0,0 sin votos engañaría más que ayudar.
+function TmdbRating({ average, count }: { average: number | null; count: number | null }) {
+  if (average == null || average <= 0 || !count) return null
+
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
+      title={`Nota media en TMDB: ${average.toFixed(1)} sobre 10 (${count.toLocaleString('es-ES')} votos)`}
+    >
+      <span aria-hidden>★</span>
+      {average.toFixed(1).replace('.', ',')}
+      <span className="font-normal text-amber-600/80 dark:text-amber-400/70">
+        ({count.toLocaleString('es-ES')})
+      </span>
+      <span className="sr-only">
+        de nota media en TMDB con {count.toLocaleString('es-ES')} votos
+      </span>
+    </span>
+  )
+}
+
 function FollowButton({ tmdbId, isFollowing }: { tmdbId: number; isFollowing: boolean }) {
   const queryClient = useQueryClient()
   const seriesKey = ['series', tmdbId] as const
@@ -322,6 +344,7 @@ export default function SeriesDetailPage() {
                   {data.number_of_seasons === 1 ? 'temporada' : 'temporadas'}
                 </span>
               )}
+              <TmdbRating average={data.vote_average} count={data.vote_count} />
             </div>
           </div>
 

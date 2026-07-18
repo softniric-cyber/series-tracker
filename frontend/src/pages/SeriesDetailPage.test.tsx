@@ -51,6 +51,8 @@ const detail: SeriesDetail = {
   ],
   cached_at: '2026-07-10T00:00:00+00:00',
   is_following: false,
+  vote_average: 8.4,
+  vote_count: 3120,
 }
 
 const providers: SeriesProviders = {
@@ -112,6 +114,26 @@ describe('SeriesDetailPage', () => {
     expect(await screen.findByText('Buenas noticias')).toBeInTheDocument()
     expect(screen.getByText('Half Loop')).toBeInTheDocument()
     expect(mockSeason).toHaveBeenCalledWith(95396, 1)
+  })
+
+  it('shows the TMDB rating in the header', async () => {
+    mockDetail.mockResolvedValue(detail)
+    mockProviders.mockResolvedValue(providers)
+    renderPage()
+
+    expect(await screen.findByText('8,4')).toBeInTheDocument()
+    // El separador de millares depende de los datos ICU del entorno (Node puede
+    // ir con small-icu y no agrupar), así que aceptamos «3.120» y «3120».
+    expect(screen.getByText(/\(3\.?120\)/)).toBeInTheDocument()
+  })
+
+  it('hides the TMDB rating when there are no votes', async () => {
+    mockDetail.mockResolvedValue({ ...detail, vote_average: 0, vote_count: 0 })
+    mockProviders.mockResolvedValue(providers)
+    renderPage()
+
+    await screen.findByRole('heading', { name: 'Separación' })
+    expect(screen.queryByText(/de nota media en TMDB/)).not.toBeInTheDocument()
   })
 
   it('follows the series when clicking the follow button', async () => {

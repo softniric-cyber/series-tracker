@@ -44,6 +44,8 @@ def _tv_payload(*, status: str = "Returning Series") -> dict[str, object]:
         "in_production": True,
         "number_of_seasons": 2,
         "number_of_episodes": 19,
+        "vote_average": 8.4,
+        "vote_count": 3120,
         "genres": [{"id": 18, "name": "Drama"}, {"id": 9648, "name": "Misterio"}],
         "seasons": [
             {
@@ -192,10 +194,26 @@ def test_series_detail_endpoint(client: TestClient, with_tmdb: None) -> None:
     assert body["genres"] == ["Drama", "Misterio"]
     assert len(body["seasons"]) == 2
     assert body["seasons"][0]["poster_url"] == "https://image.tmdb.org/t/p/w342/s1.jpg"
+    # La nota global de TMDB viaja en el JSONB de la caché hasta la ficha.
+    assert body["vote_average"] == 8.4
+    assert body["vote_count"] == 3120
 
     # Segunda visita: servida de caché, sin nueva llamada a TMDB.
     assert client.get("/series/95396", headers=headers).status_code == 200
     assert route.call_count == 1
+
+
+@respx.mock
+def test_series_detail_without_votes(client: TestClient, with_tmdb: None) -> None:
+    """Las series cacheadas antes de guardar la nota no rompen la ficha."""
+    headers = _auth_headers(client)
+    payload = _tv_payload()
+    del payload["vote_average"]
+    del payload["vote_count"]
+    respx.get(f"{BASE}/tv/95396").mock(return_value=httpx.Response(200, json=payload))
+    body = client.get("/series/95396", headers=headers).json()
+    assert body["vote_average"] is None
+    assert body["vote_count"] is None
 
 
 @respx.mock

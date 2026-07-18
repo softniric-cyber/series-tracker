@@ -53,6 +53,8 @@ export interface SeriesDetail {
   seasons: SeasonSummary[]
   cached_at: string
   is_following: boolean
+  vote_average: number | null
+  vote_count: number | null
 }
 
 export type FollowedCategory = 'watching' | 'not_started' | 'up_to_date' | 'finished'

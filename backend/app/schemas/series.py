@@ -55,6 +55,10 @@ class SeriesDetail(BaseModel):
     cached_at: datetime
     # Estado de seguimiento del usuario autenticado (S2-3).
     is_following: bool = False
+    # Valoración global de TMDB. Opcionales porque las series cacheadas antes de
+    # esta versión no las tienen en el JSONB hasta que caduque su TTL.
+    vote_average: float | None = None
+    vote_count: int | None = None
 
 
 class EpisodeSummary(BaseModel):
