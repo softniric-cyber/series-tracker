@@ -24,6 +24,7 @@ from app.schemas.series import (
     SeasonProgress,
     SeriesProgress,
 )
+from app.services import ratings
 from app.services.series_cache import (
     FINISHED_STATUSES,
     ensure_seasons_cached,
@@ -150,6 +151,7 @@ def to_followed(
     total: int = 0,
     aired: int = 0,
     watched: int = 0,
+    my_rating: int | None = None,
 ) -> FollowedSeries:
     return FollowedSeries(
         tmdb_id=series.tmdb_id,
@@ -160,6 +162,7 @@ def to_followed(
         category=categorize(series.status, total, aired, watched),
         aired_episodes=aired,
         watched_episodes=watched,
+        my_rating=my_rating,
     )
 
 
@@ -167,11 +170,21 @@ def list_my_series(db: Session, user: User, image_base: str) -> list[FollowedSer
     """Series seguidas con su categoría y progreso, sin llamar a TMDB (solo caché)."""
     counts = _episode_counts(db, user.id)
     watched = _watched_aired_counts(db, user.id)
+    # Todas las puntuaciones de una vez: una consulta en lugar de una por serie.
+    scores = ratings.ratings_for_user(db, user.id)
     result = []
     for series, added_at in list_followed(db, user):
         total, aired = counts.get(series.tmdb_id, (0, 0))
         result.append(
-            to_followed(series, added_at, image_base, total, aired, watched.get(series.tmdb_id, 0))
+            to_followed(
+                series,
+                added_at,
+                image_base,
+                total,
+                aired,
+                watched.get(series.tmdb_id, 0),
+                scores.get(series.tmdb_id),
+            )
         )
     return result
 
@@ -182,7 +195,8 @@ def followed_with_progress(
     """Un único `FollowedSeries` con su categoría, para la respuesta de seguir."""
     total, aired = _episode_counts(db, user.id).get(series.tmdb_id, (0, 0))
     watched = _watched_aired_counts(db, user.id).get(series.tmdb_id, 0)
-    return to_followed(series, added_at, image_base, total, aired, watched)
+    my_rating = ratings.get_rating(db, user.id, series.tmdb_id)
+    return to_followed(series, added_at, image_base, total, aired, watched, my_rating)
 
 
 # --- Episodios vistos y progreso (S2-4) -----------------------------------

@@ -75,6 +75,9 @@ def _extract_metadata(payload: dict[str, Any], previous: dict[str, Any] | None) 
         "first_air_date": payload.get("first_air_date") or None,
         "last_air_date": payload.get("last_air_date") or None,
         "in_production": payload.get("in_production"),
+        # Valoración global de TMDB, para contrastarla con la del usuario en la ficha.
+        "vote_average": payload.get("vote_average"),
+        "vote_count": payload.get("vote_count"),
         "seasons": seasons,
     }
     # Preservamos la freshness por temporada al refrescar la serie.
@@ -254,6 +257,8 @@ def to_series_detail(series: Series, image_base: str) -> SeriesDetail:
         number_of_seasons=meta.get("number_of_seasons"),
         number_of_episodes=meta.get("number_of_episodes"),
         in_production=meta.get("in_production"),
+        vote_average=meta.get("vote_average"),
+        vote_count=meta.get("vote_count"),
         seasons=seasons,
         cached_at=series.cached_at,
     )

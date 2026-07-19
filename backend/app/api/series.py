@@ -12,7 +12,7 @@ from app.schemas.series import (
     SeriesProviders,
     SeriesSearchResponse,
 )
-from app.services import tracking
+from app.services import ratings, tracking
 from app.services.series import build_series_providers, search_series
 from app.services.series_cache import (
     get_season,
@@ -61,6 +61,7 @@ async def series_detail(
         ) from exc
     detail = to_series_detail(series, get_settings().tmdb_image_base_url)
     detail.is_following = tracking.is_following(db, current_user.id, tmdb_id)
+    detail.my_rating = ratings.get_rating(db, current_user.id, tmdb_id)
     return detail
 
 

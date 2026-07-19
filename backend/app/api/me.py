@@ -7,8 +7,13 @@ from fastapi import APIRouter, HTTPException, Path, Query, status
 
 from app.api.deps import CurrentUser, DbSession, TmdbClient
 from app.core.config import get_settings
-from app.schemas.series import CalendarEntry, FollowedSeries, SeriesProgress
-from app.services import tracking
+from app.schemas.series import (
+    CalendarEntry,
+    FollowedSeries,
+    RatingInput,
+    SeriesProgress,
+)
+from app.services import ratings, tracking
 from app.services.tmdb_client import TMDBNotFoundError
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -53,6 +58,40 @@ def unfollow_series(
     tmdb_id: Annotated[int, Path(ge=1)],
 ) -> None:
     tracking.unfollow_series(db, current_user, tmdb_id)
+
+
+# --- Puntuación personal ---------------------------------------------------
+
+
+@router.put("/series/{tmdb_id}/rating", status_code=status.HTTP_204_NO_CONTENT)
+async def rate_series(
+    current_user: CurrentUser,
+    client: TmdbClient,
+    db: DbSession,
+    payload: RatingInput,
+    tmdb_id: Annotated[int, Path(ge=1)],
+) -> None:
+    """Puntúa la serie de 1 a 5 estrellas (idempotente; sobrescribe la anterior).
+
+    No exige seguir la serie: se puede valorar algo que ya terminaste.
+    """
+    try:
+        await ratings.set_rating(
+            db, client, current_user, tmdb_id, payload.score, language=current_user.language
+        )
+    except TMDBNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Serie no encontrada"
+        ) from exc
+
+
+@router.delete("/series/{tmdb_id}/rating", status_code=status.HTTP_204_NO_CONTENT)
+def unrate_series(
+    current_user: CurrentUser,
+    db: DbSession,
+    tmdb_id: Annotated[int, Path(ge=1)],
+) -> None:
+    ratings.delete_rating(db, current_user, tmdb_id)
 
 
 # --- Episodios vistos y progreso (S2-4) -----------------------------------

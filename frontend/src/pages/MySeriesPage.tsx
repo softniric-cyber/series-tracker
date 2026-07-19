@@ -37,11 +37,19 @@ function FollowedCard({ series }: { series: FollowedSeries }) {
         <h3 className="truncate text-sm font-semibold" title={series.name}>
           {series.name}
         </h3>
-        {showProgress && (
-          <p className="mt-1 text-xs text-neutral-500">
-            {series.watched_episodes}/{series.aired_episodes} vistos
-          </p>
-        )}
+        <div className="mt-1 flex items-center gap-2 text-xs text-neutral-500">
+          {showProgress && (
+            <span>
+              {series.watched_episodes}/{series.aired_episodes} vistos
+            </span>
+          )}
+          {series.my_rating != null && (
+            <span className="ml-auto shrink-0 text-amber-500" title={`Tu nota: ${series.my_rating}/5`}>
+              <span aria-hidden>{'★'.repeat(series.my_rating)}</span>
+              <span className="sr-only">Tu nota: {series.my_rating} de 5</span>
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   )

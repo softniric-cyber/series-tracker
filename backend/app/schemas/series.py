@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Categoría de una serie seguida en «Mis series», según el progreso de visionado
 # y si la serie tendrá nuevos episodios (ver `tracking.categorize`).
@@ -55,6 +55,12 @@ class SeriesDetail(BaseModel):
     cached_at: datetime
     # Estado de seguimiento del usuario autenticado (S2-3).
     is_following: bool = False
+    # Valoración global de TMDB. Opcionales porque las series cacheadas antes de
+    # esta versión no las tienen en el JSONB hasta que caduque su TTL.
+    vote_average: float | None = None
+    vote_count: int | None = None
+    # Puntuación del usuario autenticado (1-5); None si aún no la ha valorado.
+    my_rating: int | None = None
 
 
 class EpisodeSummary(BaseModel):
@@ -122,6 +128,13 @@ class FollowedSeries(BaseModel):
     category: FollowedCategory
     aired_episodes: int
     watched_episodes: int
+    my_rating: int | None = None
+
+
+class RatingInput(BaseModel):
+    """Puntuación que envía el usuario: estrellas enteras de 1 a 5."""
+
+    score: int = Field(ge=1, le=5)
 
 
 class CalendarEntry(BaseModel):
