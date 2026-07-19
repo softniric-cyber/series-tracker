@@ -32,6 +32,7 @@ function makeSeries(overrides: Partial<FollowedSeries>): FollowedSeries {
     category: 'watching',
     aired_episodes: 0,
     watched_episodes: 0,
+    my_rating: null,
     ...overrides,
   }
 }
@@ -54,6 +55,13 @@ describe('MySeriesPage', () => {
     const link = await screen.findByRole('link', { name: /Separación/ })
     expect(link).toHaveAttribute('href', '/series/95396')
     expect(screen.getByText('3/9 vistos')).toBeInTheDocument()
+  })
+
+  it('shows the personal rating on the card', async () => {
+    mockGetMySeries.mockResolvedValue([makeSeries({ name: 'Separación', my_rating: 4 })])
+    renderPage()
+
+    expect(await screen.findByText('Tu nota: 4 de 5')).toBeInTheDocument()
   })
 
   it('groups series into ordered sections by category', async () => {

@@ -1,8 +1,9 @@
 """Baja de cuenta y exportación de datos (RGPD — S3-3).
 
 El borrado elimina la fila de `users`; las FK con ON DELETE CASCADE arrastran
-`user_series` y `watched_episodes`, de modo que no queda rastro del usuario. La
-caché compartida (`series`/`episodes`) no es dato personal y se conserva.
+`user_series`, `watched_episodes` y `series_ratings`, de modo que no queda rastro
+del usuario. La caché compartida (`series`/`episodes`) no es dato personal y se
+conserva.
 """
 
 from datetime import UTC, datetime
@@ -12,11 +13,13 @@ from sqlalchemy.orm import Session
 
 from app.models.episode import Episode
 from app.models.series import Series
+from app.models.series_rating import SeriesRating
 from app.models.user import User
 from app.models.user_series import UserSeries
 from app.models.watched_episode import WatchedEpisode
 from app.schemas.user import (
     ExportedFollowedSeries,
+    ExportedRating,
     ExportedWatchedEpisode,
     UserDataExport,
     UserPublic,
@@ -66,9 +69,21 @@ def export_user_data(db: Session, user: User) -> UserDataExport:
         )
     ]
 
+    ratings_stmt = (
+        select(Series.tmdb_id, Series.name, SeriesRating.score, SeriesRating.updated_at)
+        .join(SeriesRating, SeriesRating.series_tmdb_id == Series.tmdb_id)
+        .where(SeriesRating.user_id == user.id)
+        .order_by(Series.name)
+    )
+    ratings = [
+        ExportedRating(tmdb_id=tmdb_id, name=name, score=score, updated_at=updated_at)
+        for tmdb_id, name, score, updated_at in db.execute(ratings_stmt).all()
+    ]
+
     return UserDataExport(
         exported_at=datetime.now(UTC),
         profile=UserPublic.model_validate(user),
         followed_series=followed,
         watched_episodes=watched,
+        ratings=ratings,
     )

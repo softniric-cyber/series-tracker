@@ -18,6 +18,14 @@ export function unfollowSeries(tmdbId: number): Promise<void> {
   return apiFetch<void>(`/me/series/${tmdbId}`, { method: 'DELETE' })
 }
 
+export function rateSeries(tmdbId: number, score: number): Promise<void> {
+  return apiFetch<void>(`/me/series/${tmdbId}/rating`, { method: 'PUT', body: { score } })
+}
+
+export function unrateSeries(tmdbId: number): Promise<void> {
+  return apiFetch<void>(`/me/series/${tmdbId}/rating`, { method: 'DELETE' })
+}
+
 export function getProgress(tmdbId: number): Promise<SeriesProgress> {
   return apiFetch<SeriesProgress>(`/me/series/${tmdbId}/progress`)
 }

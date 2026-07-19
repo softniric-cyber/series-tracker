@@ -21,6 +21,8 @@ const mockMarkEpisode = vi.fn()
 const mockUnmarkEpisode = vi.fn()
 const mockMarkSeason = vi.fn()
 const mockUnmarkSeason = vi.fn()
+const mockRate = vi.fn()
+const mockUnrate = vi.fn()
 vi.mock('../api/me', () => ({
   followSeries: (id: number) => mockFollow(id),
   unfollowSeries: (id: number) => mockUnfollow(id),
@@ -29,6 +31,8 @@ vi.mock('../api/me', () => ({
   unmarkEpisodeWatched: (id: number) => mockUnmarkEpisode(id),
   markSeasonWatched: (id: number, n: number) => mockMarkSeason(id, n),
   unmarkSeasonWatched: (id: number, n: number) => mockUnmarkSeason(id, n),
+  rateSeries: (id: number, score: number) => mockRate(id, score),
+  unrateSeries: (id: number) => mockUnrate(id),
 }))
 
 import SeriesDetailPage from './SeriesDetailPage'
@@ -53,6 +57,7 @@ const detail: SeriesDetail = {
   is_following: false,
   vote_average: 8.4,
   vote_count: 3120,
+  my_rating: null,
 }
 
 const providers: SeriesProviders = {
@@ -134,6 +139,33 @@ describe('SeriesDetailPage', () => {
 
     await screen.findByRole('heading', { name: 'Separación' })
     expect(screen.queryByText(/de nota media en TMDB/)).not.toBeInTheDocument()
+  })
+
+  it('rates the series optimistically when clicking a star', async () => {
+    mockDetail.mockResolvedValue(detail)
+    mockProviders.mockResolvedValue(providers)
+    // La mutación queda sin resolver: así lo que se ve es el estado optimista.
+    mockRate.mockReturnValue(new Promise(() => {}))
+    renderPage()
+
+    const fourth = await screen.findByRole('button', { name: 'Puntuar con 4 estrellas' })
+    await userEvent.click(fourth)
+
+    expect(mockRate).toHaveBeenCalledWith(95396, 4)
+    expect(await screen.findByText('Tu nota: 4/5')).toBeInTheDocument()
+  })
+
+  it('clears the rating when clicking the star already selected', async () => {
+    mockDetail.mockResolvedValue({ ...detail, my_rating: 3 })
+    mockProviders.mockResolvedValue(providers)
+    mockUnrate.mockReturnValue(new Promise(() => {}))
+    renderPage()
+
+    expect(await screen.findByText('Tu nota: 3/5')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar tu puntuación de 3' }))
+
+    expect(mockUnrate).toHaveBeenCalledWith(95396)
+    expect(await screen.findByText('Sin puntuar')).toBeInTheDocument()
   })
 
   it('follows the series when clicking the follow button', async () => {

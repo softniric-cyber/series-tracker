@@ -27,6 +27,13 @@ class ExportedFollowedSeries(BaseModel):
     added_at: datetime
 
 
+class ExportedRating(BaseModel):
+    tmdb_id: int
+    name: str
+    score: int
+    updated_at: datetime
+
+
 class ExportedWatchedEpisode(BaseModel):
     episode_tmdb_id: int
     series_tmdb_id: int
@@ -42,6 +49,7 @@ class UserDataExport(BaseModel):
     profile: UserPublic
     followed_series: list[ExportedFollowedSeries]
     watched_episodes: list[ExportedWatchedEpisode]
+    ratings: list[ExportedRating] = []
 
 
 class UserUpdate(BaseModel):

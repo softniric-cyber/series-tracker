@@ -55,6 +55,7 @@ export interface SeriesDetail {
   is_following: boolean
   vote_average: number | null
   vote_count: number | null
+  my_rating: number | null
 }
 
 export type FollowedCategory = 'watching' | 'not_started' | 'up_to_date' | 'finished'
@@ -68,6 +69,7 @@ export interface FollowedSeries {
   category: FollowedCategory
   aired_episodes: number
   watched_episodes: number
+  my_rating: number | null
 }
 
 export interface EpisodeSummary {

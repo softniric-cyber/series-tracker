@@ -7,6 +7,7 @@ import { ApiError } from '../api/client'
 import type { SeasonProgress, SeasonSummary, SeriesDetail, SeriesProgress } from '../api/types'
 import SeasonEpisodes from '../components/SeasonEpisodes'
 import Skeleton from '../components/Skeleton'
+import StarRating from '../components/StarRating'
 import { cardClass } from '../components/ui'
 
 function yearRange(detail: SeriesDetail): string | null {
@@ -367,7 +368,10 @@ export default function SeriesDetailPage() {
             </p>
           )}
 
-          <FollowButton tmdbId={id} isFollowing={data.is_following} />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+            <FollowButton tmdbId={id} isFollowing={data.is_following} />
+            <StarRating tmdbId={id} value={data.my_rating} />
+          </div>
         </div>
       </header>
 
