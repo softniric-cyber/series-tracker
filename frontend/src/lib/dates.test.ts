@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, endOfMonth, monthGridDays, startOfMonth, startOfWeek, toKey, weekDays } from './dates'
+import {
+  addDays,
+  endOfMonth,
+  monthGridDays,
+  startOfMonth,
+  startOfWeek,
+  toKey,
+  weekDays,
+} from './dates'
 
 describe('date helpers', () => {
   it('formats a local date key as YYYY-MM-DD', () => {

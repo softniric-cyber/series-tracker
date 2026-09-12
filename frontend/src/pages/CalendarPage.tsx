@@ -65,13 +65,7 @@ function DayCell({
   )
 }
 
-function AgendaList({
-  days,
-  byDay,
-}: {
-  days: Date[]
-  byDay: Map<string, CalendarEntry[]>
-}) {
+function AgendaList({ days, byDay }: { days: Date[]; byDay: Map<string, CalendarEntry[]> }) {
   const daysWithEntries = days.filter((d) => byDay.has(toKey(d)))
   if (daysWithEntries.length === 0) return null
 
@@ -251,9 +245,7 @@ export default function CalendarPage() {
 
       {isPending && <Spinner label="Cargando calendario…" />}
       {data && data.length === 0 && !isPending && (
-        <p className="text-sm text-neutral-500">
-          No hay estrenos de tus series en este periodo.
-        </p>
+        <p className="text-sm text-neutral-500">No hay estrenos de tus series en este periodo.</p>
       )}
     </div>
   )

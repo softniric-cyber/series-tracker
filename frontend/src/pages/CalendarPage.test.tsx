@@ -62,9 +62,9 @@ describe('CalendarPage', () => {
     const [from, to] = mockGetCalendar.mock.calls.at(-1) as [string, string]
     const days = (new Date(to).getTime() - new Date(from).getTime()) / 86_400_000
     expect(days).toBe(6)
-    expect((await screen.findAllByRole('link', { name: /Juego de tronos/ })).length).toBeGreaterThan(
-      0,
-    )
+    expect(
+      (await screen.findAllByRole('link', { name: /Juego de tronos/ })).length,
+    ).toBeGreaterThan(0)
   })
 
   it('shows an empty state when there are no premieres', async () => {

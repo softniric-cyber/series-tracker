@@ -51,7 +51,13 @@ const detail: SeriesDetail = {
   in_production: true,
   seasons: [
     { season_number: 0, name: 'Especiales', episode_count: 3, air_date: null, poster_url: null },
-    { season_number: 1, name: 'Temporada 1', episode_count: 9, air_date: '2022-02-17', poster_url: null },
+    {
+      season_number: 1,
+      name: 'Temporada 1',
+      episode_count: 9,
+      air_date: '2022-02-17',
+      poster_url: null,
+    },
   ],
   cached_at: '2026-07-10T00:00:00+00:00',
   is_following: false,
@@ -64,7 +70,12 @@ const providers: SeriesProviders = {
   country: 'ES',
   link: 'https://tmdb.org/x',
   flatrate: [
-    { provider_id: 350, provider_name: 'Apple TV+', logo_url: 'https://image.tmdb.org/t/p/w92/a.jpg', display_priority: 1 },
+    {
+      provider_id: 350,
+      provider_name: 'Apple TV+',
+      logo_url: 'https://image.tmdb.org/t/p/w92/a.jpg',
+      display_priority: 1,
+    },
   ],
   rent: [],
   buy: [],
@@ -75,8 +86,22 @@ const season1: SeasonDetail = {
   season_number: 1,
   name: 'Temporada 1',
   episodes: [
-    { tmdb_id: 1, season_number: 1, episode_number: 1, name: 'Buenas noticias', air_date: '2022-02-17', watched: false },
-    { tmdb_id: 2, season_number: 1, episode_number: 2, name: 'Half Loop', air_date: '2022-02-18', watched: false },
+    {
+      tmdb_id: 1,
+      season_number: 1,
+      episode_number: 1,
+      name: 'Buenas noticias',
+      air_date: '2022-02-17',
+      watched: false,
+    },
+    {
+      tmdb_id: 2,
+      season_number: 1,
+      episode_number: 2,
+      name: 'Half Loop',
+      air_date: '2022-02-18',
+      watched: false,
+    },
   ],
 }
 
