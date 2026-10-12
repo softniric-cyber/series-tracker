@@ -133,7 +133,7 @@ Decisión: se aplana `season` dentro de `episodes` (columna `season_number`) —
 
 ## 7. Seguridad
 
-- Autenticación JWT: access token 30 min + refresh token 30 días (rotado). Hash de contraseñas con **argon2** (`passlib`).
+- Autenticación JWT: access token 30 min + refresh token 90 días (rotado). Hash de contraseñas con **argon2** (`passlib`).
 - CORS restringido al dominio del frontend. HTTPS forzado (lo dan Render/Cloudflare).
 - Rate limiting por IP en endpoints de auth (slowapi) contra fuerza bruta.
 - La API key de TMDB y el secreto JWT viven solo en variables de entorno del backend (nunca en el frontend ni en el repo).

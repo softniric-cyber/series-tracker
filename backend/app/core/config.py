@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     jwt_secret: str = "change-me"
     jwt_access_minutes: int = 30
-    jwt_refresh_days: int = 30
+    jwt_refresh_days: int = 90
 
     tmdb_bearer_token: str = ""
     tmdb_base_url: str = "https://api.themoviedb.org/3"

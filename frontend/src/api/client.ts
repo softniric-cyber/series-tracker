@@ -30,19 +30,40 @@ function rawFetch(path: string, token: string | null, options: ApiFetchOptions):
   })
 }
 
-async function tryRefresh(): Promise<boolean> {
+type RefreshResult = 'refreshed' | 'rejected' | 'unavailable'
+
+// Refresco en curso compartido: si varias peticiones reciben 401 a la vez, todas
+// esperan al mismo /auth/refresh en lugar de lanzar uno cada una.
+let refreshInFlight: Promise<RefreshResult> | null = null
+
+async function doRefresh(): Promise<RefreshResult> {
   const refreshToken = getRefreshToken()
-  if (!refreshToken) return false
-  const resp = await rawFetch('/auth/refresh', null, {
-    method: 'POST',
-    body: { refresh_token: refreshToken },
-  })
-  if (!resp.ok) {
-    clearTokens()
-    return false
+  if (!refreshToken) return 'rejected'
+  let resp: Response
+  try {
+    resp = await rawFetch('/auth/refresh', null, {
+      method: 'POST',
+      body: { refresh_token: refreshToken },
+    })
+  } catch {
+    return 'unavailable'
   }
+  if (resp.status === 401) {
+    // Solo un 401 significa que el refresh token ya no vale: entonces sí cerramos sesión.
+    clearTokens()
+    return 'rejected'
+  }
+  // 5xx, 429 o el backend despertando (arranque en frío): conservamos la sesión.
+  if (!resp.ok) return 'unavailable'
   setTokens((await resp.json()) as TokenPair)
-  return true
+  return 'refreshed'
+}
+
+function tryRefresh(): Promise<RefreshResult> {
+  refreshInFlight ??= doRefresh().finally(() => {
+    refreshInFlight = null
+  })
+  return refreshInFlight
 }
 
 async function extractMessage(resp: Response): Promise<string> {
@@ -62,13 +83,18 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   const useAuth = options.auth ?? true
   let resp = await rawFetch(path, useAuth ? getAccessToken() : null, options)
 
-  if (resp.status === 401 && useAuth && (await tryRefresh())) {
-    resp = await rawFetch(path, getAccessToken(), options)
+  if (resp.status === 401 && useAuth) {
+    const result = await tryRefresh()
+    if (result === 'refreshed') {
+      resp = await rawFetch(path, getAccessToken(), options)
+    } else if (result === 'unavailable') {
+      throw new ApiError(503, 'Service unavailable')
+    }
   }
 
   if (!resp.ok) {
     const message = await extractMessage(resp)
-    if (resp.status === 401) clearTokens()
+    if (resp.status === 401 && useAuth) clearTokens()
     throw new ApiError(resp.status, message)
   }
 

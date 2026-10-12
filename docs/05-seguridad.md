@@ -5,7 +5,7 @@ estado y dónde vive en el código.
 
 | # | Control | Estado | Dónde |
 |---|---------|--------|-------|
-| 1 | **JWT** access 30 min + refresh 30 días, refresh rotado | ✅ | `services/security.py`, `api/auth.py` (cada `/auth/refresh` emite un par nuevo) |
+| 1 | **JWT** access 30 min + refresh 90 días, refresh rotado | ✅ | `services/security.py`, `api/auth.py` (cada `/auth/refresh` emite un par nuevo) |
 | 2 | Hash de contraseñas con **argon2** | ✅ | `services/security.py` (passlib/argon2) |
 | 3 | **CORS** restringido al dominio del frontend | ✅ | `main.py` + `CORS_ORIGINS` (Render) |
 | 4 | **HTTPS** forzado | ✅ | lo proveen Render (backend) y Cloudflare Pages (frontend) |

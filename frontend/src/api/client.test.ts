@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getAccessToken, setTokens } from '../auth/tokenStore'
+import { getAccessToken, getRefreshToken, setTokens } from '../auth/tokenStore'
 import { ApiError, apiFetch } from './client'
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -55,5 +55,51 @@ describe('apiFetch', () => {
 
     await expect(apiFetch('/users/me')).rejects.toBeInstanceOf(ApiError)
     expect(getAccessToken()).toBeNull()
+  })
+
+  it('keeps the session when the refresh endpoint is unavailable', async () => {
+    setTokens({ access_token: 'old', refresh_token: 'ref', token_type: 'bearer' })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('', { status: 401 }))
+      .mockResolvedValueOnce(new Response('', { status: 502 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(apiFetch('/users/me')).rejects.toMatchObject({ status: 503 })
+    expect(getAccessToken()).toBe('old')
+    expect(getRefreshToken()).toBe('ref')
+  })
+
+  it('keeps the session when the refresh request fails at the network level', async () => {
+    setTokens({ access_token: 'old', refresh_token: 'ref', token_type: 'bearer' })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('', { status: 401 }))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(apiFetch('/users/me')).rejects.toBeInstanceOf(ApiError)
+    expect(getRefreshToken()).toBe('ref')
+  })
+
+  it('shares a single refresh between concurrent 401s', async () => {
+    setTokens({ access_token: 'old', refresh_token: 'ref', token_type: 'bearer' })
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url.endsWith('/auth/refresh')) {
+        return Promise.resolve(
+          jsonResponse({ access_token: 'new', refresh_token: 'ref2', token_type: 'bearer' }),
+        )
+      }
+      const auth = (init?.headers as Record<string, string> | undefined)?.['Authorization']
+      return Promise.resolve(
+        auth === 'Bearer new' ? jsonResponse({ ok: true }) : new Response('', { status: 401 }),
+      )
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await Promise.all([apiFetch('/a'), apiFetch('/b'), apiFetch('/c')])
+
+    const refreshCalls = fetchMock.mock.calls.filter(([url]) => url.endsWith('/auth/refresh'))
+    expect(refreshCalls).toHaveLength(1)
   })
 })

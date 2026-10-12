@@ -6,8 +6,12 @@ import {
   login as apiLogin,
   register as apiRegister,
 } from '../api/auth'
+import { ApiError } from '../api/client'
 import type { UserPublic } from '../api/types'
 import { clearTokens, getAccessToken, setTokens } from './tokenStore'
+
+// Esperas entre reintentos al restaurar la sesión (cubren el arranque en frío de Render).
+const RESTORE_RETRY_DELAYS_MS = [2000, 5000, 10000, 20000]
 
 type Status = 'loading' | 'authenticated' | 'anonymous'
 
@@ -29,21 +33,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Al cargar la app, si hay token guardado, validamos la sesión con /users/me.
   // Esto hace que la sesión sobreviva a recargas.
+  // Solo un 401 invalida la sesión; ante errores de red o 5xx (p. ej. el backend
+  // de Render despertando) reintentamos sin borrar los tokens.
   useEffect(() => {
     if (!getAccessToken()) {
       setStatus('anonymous')
       return
     }
-    getMe()
-      .then((me) => {
-        setUser(me)
-        setStatus('authenticated')
-      })
-      .catch(() => {
-        clearTokens()
-        setUser(null)
-        setStatus('anonymous')
-      })
+    let cancelled = false
+    async function restoreSession() {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          const me = await getMe()
+          if (cancelled) return
+          setUser(me)
+          setStatus('authenticated')
+          return
+        } catch (err) {
+          if (cancelled) return
+          const unauthorized = err instanceof ApiError && err.status === 401
+          if (unauthorized || attempt >= RESTORE_RETRY_DELAYS_MS.length) {
+            if (unauthorized) clearTokens()
+            setUser(null)
+            setStatus('anonymous')
+            return
+          }
+          await new Promise((r) => setTimeout(r, RESTORE_RETRY_DELAYS_MS[attempt]))
+        }
+      }
+    }
+    void restoreSession()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   async function login(email: string, password: string) {
