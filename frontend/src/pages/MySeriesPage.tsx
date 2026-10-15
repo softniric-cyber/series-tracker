@@ -44,7 +44,10 @@ function FollowedCard({ series }: { series: FollowedSeries }) {
             </span>
           )}
           {series.my_rating != null && (
-            <span className="ml-auto shrink-0 text-amber-500" title={`Tu nota: ${series.my_rating}/5`}>
+            <span
+              className="ml-auto shrink-0 text-amber-500"
+              title={`Tu nota: ${series.my_rating}/5`}
+            >
               <span aria-hidden>{'★'.repeat(series.my_rating)}</span>
               <span className="sr-only">Tu nota: {series.my_rating} de 5</span>
             </span>
@@ -74,7 +77,10 @@ export default function MySeriesPage() {
           <Skeleton className="h-6 w-28" />
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800">
+              <div
+                key={i}
+                className="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800"
+              >
                 <Skeleton className="aspect-[2/3] w-full rounded-none" />
                 <div className="space-y-2 p-3">
                   <Skeleton className="h-4 w-3/4" />
@@ -86,7 +92,9 @@ export default function MySeriesPage() {
         </section>
       )}
       {isError && (
-        <p className="text-sm text-red-600">No se pudieron cargar tus series. Inténtalo de nuevo.</p>
+        <p className="text-sm text-red-600">
+          No se pudieron cargar tus series. Inténtalo de nuevo.
+        </p>
       )}
       {data && data.length === 0 && (
         <p className="text-sm text-neutral-500">

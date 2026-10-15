@@ -128,7 +128,9 @@ export default function AccountPage() {
               </button>
             </div>
             {deleteError && (
-              <p className="text-sm text-red-600">No se pudo eliminar la cuenta. Inténtalo de nuevo.</p>
+              <p className="text-sm text-red-600">
+                No se pudo eliminar la cuenta. Inténtalo de nuevo.
+              </p>
             )}
           </div>
         )}

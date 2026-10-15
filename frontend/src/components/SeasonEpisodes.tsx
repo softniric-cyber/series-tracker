@@ -17,7 +17,9 @@ const clamp = (n: number, min: number, max: number): number => Math.min(Math.max
 // (misma semántica que el backend: season>=1 y air_date<=hoy).
 function countsForProgress(ep: EpisodeSummary): boolean {
   return (
-    ep.season_number >= 1 && ep.air_date != null && ep.air_date <= new Date().toISOString().slice(0, 10)
+    ep.season_number >= 1 &&
+    ep.air_date != null &&
+    ep.air_date <= new Date().toISOString().slice(0, 10)
   )
 }
 

@@ -66,3 +66,17 @@ Elige **una** de las dos opciones (no hace falta las dos).
   `workflow_dispatch` para poder lanzarlo a mano).
 - Si algún día migras el backend a un plan de pago sin spin-down, este pinger deja de
   ser necesario (aunque las alertas de caída de UptimeRobot siguen siendo útiles).
+
+## Ojo: GitHub desactiva los crons si el repo está inactivo
+
+GitHub **deshabilita automáticamente los workflows programados (`schedule`) de un repo
+público tras 60 días sin commits**. Eso afecta tanto a `keepalive.yml` como al cron
+diario de `refresh.yml` (refresco del calendario). Señales y remedios:
+
+- Con el pinger externo configurado, que se desactive `keepalive.yml` da igual; lo que
+  sí se nota es perder `refresh.yml`, porque las fechas de estreno dejan de refrescarse.
+- Cualquier commit en `main` reinicia el contador de 60 días.
+- Si ya se han desactivado: pestaña **Actions** del repo → el workflow aparece marcado
+  como deshabilitado → **Enable workflow**.
+- Para comprobarlo desde la terminal: `gh workflow list` (deben salir los tres como
+  `active`) y `gh run list --limit 5` para ver que los `schedule` siguen ejecutándose.

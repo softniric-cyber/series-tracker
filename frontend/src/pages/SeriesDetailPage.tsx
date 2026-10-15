@@ -101,7 +101,10 @@ function Progress({ data }: { data: SeriesProgress }) {
         </span>
       </div>
       <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
-        <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${percent}%` }} />
+        <div
+          className="h-full rounded-full bg-brand-600 transition-all"
+          style={{ width: `${percent}%` }}
+        />
       </div>
       <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">
         {next ? (
@@ -320,11 +323,7 @@ export default function SeriesDetailPage() {
         <div className="w-40 shrink-0 self-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-800 sm:self-start">
           <div className="aspect-[2/3] w-full">
             {data.poster_url ? (
-              <img
-                src={data.poster_url}
-                alt={data.name}
-                className="h-full w-full object-cover"
-              />
+              <img src={data.poster_url} alt={data.name} className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full items-center justify-center text-xs text-neutral-400">
                 Sin póster

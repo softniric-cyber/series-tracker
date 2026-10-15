@@ -5,7 +5,11 @@
 `.github/workflows/ci.yml` corre en cada PR y push a `main`:
 
 - **Backend:** `ruff check`, `ruff format --check`, `mypy app`, `pytest`.
-- **Frontend:** `oxlint`, `vite build`.
+- **Frontend:** `oxlint`, `prettier --check`, `vitest run`, `vite build`.
+
+El formato del frontend lo fija `frontend/.prettierrc.json` (sin punto y coma, comillas
+simples, ancho 100 — igual que `ruff` en el backend). Para formatear: `npm run format`;
+para comprobarlo sin tocar nada: `npm run format:check`.
 
 Marca `main` como protegida y exige CI verde + 1 revisión (Settings > Branches).
 
